@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Data & Temp files
+*.xlsx
+*.zip
+~$*.xlsx
+
+# Graph analysis outputs
+analisis-graf-nilai/
