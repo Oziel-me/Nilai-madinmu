@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galeri 9 Genre Infografis Lengkap - Madin MU</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- ECharts CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              DEFAULT: '#16a34a', // green-600
+              soft: 'rgba(22, 163, 74, 0.1)',
+            },
+            danger: {
+              DEFAULT: '#dc2626', // red-600
+              soft: 'rgba(220, 38, 38, 0.1)',
+            },
+            warning: {
+              DEFAULT: '#eab308', // yellow-500
+              soft: 'rgba(234, 179, 8, 0.1)',
+            },
+            neutral: {
+              DEFAULT: '#71717a', // zinc-500
+              soft: 'rgba(113, 113, 122, 0.1)',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #fafafa;
+      color: #18181b;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .dark body {
+      background-color: #0c0d0e;
+      color: #f4f4f5;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #e5e7eb;
+      border-radius: 4px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #27292c;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="sticky top-0 z-50 bg-white/80 dark:bg-[#18191b]/80 backdrop-blur-md border-b border-gray-200 dark:border-[#27292c] h-16 flex items-center transition-colors duration-200">
+    <div class="w-full px-6 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold shadow-md shadow-green-500/20">
+          M
+        </div>
+        <div>
+          <h1 class="text-sm font-bold text-gray-900 dark:text-white leading-none">Galeri 9 Genre Infografis</h1>
+          <p class="text-[9px] text-gray-500 dark:text-gray-400 mt-1 font-medium">Demo Komprehensif Berdasarkan Struktur Data</p>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex items-center gap-4">
+        <!-- Toggle Theme -->
+        <button id="themeToggle" class="p-2 rounded-lg border border-gray-200 dark:border-[#27292c] bg-white dark:bg-[#18191b] hover:bg-gray-50 dark:hover:bg-zinc-800 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all cursor-pointer">
+          <svg id="sunIcon" class="w-4 h-4 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m2.828 0l-.707-.707m2.828-11.314l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"/></svg>
+          <svg id="moonIcon" class="w-4 h-4 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN SIDEBAR LAYOUT -->
+  <div class="flex-grow flex flex-col md:flex-row">
+    
+    <!-- LEFT SIDEBAR MENU -->
+    <aside class="w-full md:w-64 shrink-0 bg-white dark:bg-[#141516] border-r border-gray-200 dark:border-[#27292c] py-6 px-4 flex flex-col gap-2">
+      <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2">Daftar Genre</div>
+      <nav class="flex flex-col gap-1" id="genreNav">
+        <button onclick="switchGenre(1)" class="genre-btn w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2.5 bg-green-500/10 text-green-500 border border-green-500/20" data-genre="1">
+          <span>📊</span> 1. Statistical Infographic
+        </button>
+        <button onclick="switchGenre(2)" class="genre-btn w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 border border-transparent text-gray-600 dark:text-gray-300" data-genre="2">
+          <span>📝</span> 2. Informational Infographic
+        </button>
+        <button onclick="switchGenre(3)" class="genre-btn w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 border border-transparent text-gray-600 dark:text-gray-300" data-genre="3">
+          <span>📅</span> 3. Timeline Infographic
+        </button>
+        <button onclick="switchGenre(4)" class="genre-btn w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 border border-transparent text-gray-600 dark:text-gray-300" data-genre="4">
+          <span>🔄</span> 4. Process Infographic
+        </button>
+        <button onclick="switchGenre(5)" class="genre-btn w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 border border-transparent text-gray-600 dark:text-gray-300" data-genre="5">
+          <span>🗺️</span> 5. Geographic Infographic
+        </button>
+        <button onclick="switchGenre(6)" class="genre-btn w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 border border-transparent text-gray-600 dark:text-gray-300" data-genre="6">
+          <span>📐</span> 6. Hierarchical Infographic
+        </button>
+        <button onclick="switchGenre(7)" class="genre-btn w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 border border-transparent text-gray-600 dark:text-gray-300" data-genre="7">
+          <span>⚖️</span> 7. Comparison Infographic
+        </button>
+        <button onclick="switchGenre(8)" class="genre-btn w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 border border-transparent text-gray-600 dark:text-gray-300" data-genre="8">
+          <span>🕸️</span> 8. Relational / Network
+        </button>
+        <button onclick="switchGenre(9)" class="genre-btn w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center gap-2.5 hover:bg-gray-50 dark:hover:bg-zinc-800 border border-transparent text-gray-600 dark:text-gray-300" data-genre="9">
+          <span>🎛️</span> 9. Dashboard-style
+        </button>
+      </nav>
+    </aside>
+
+    <!-- CONTENT DISPLAY AREA -->
+    <main class="flex-grow p-6 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
+      
+      <!-- GENRE 1: STATISTICAL INFOGRAPHIC -->
+      <section id="genreSection1" class="genre-section flex flex-col gap-6">
+        <div>
+          <h2 class="text-xl font-extrabold text-gray-900 dark:text-white">1. Statistical Infographic (Infografis Statistik)</h2>
+          <p class="text-xs text-gray-500 mt-1">Fokus utama menyajikan data angka hasil penilaian ke dalam visualisasi diagram statistik.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 shadow-sm">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase mb-4">A. Pie / Donut Chart</h4>
+            <div id="statDonut" class="h-48 w-full"></div>
+          </div>
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 shadow-sm">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase mb-4">B. Bar / Column Chart</h4>
+            <div id="statBar" class="h-48 w-full"></div>
+          </div>
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 shadow-sm">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase mb-4">C. Line Chart</h4>
+            <div id="statLine" class="h-48 w-full"></div>
+          </div>
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 shadow-sm">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase mb-4">D. Area Chart</h4>
+            <div id="statArea" class="h-48 w-full"></div>
+          </div>
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 shadow-sm">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase mb-4">E. Radar / Spider Chart</h4>
+            <div id="statRadar" class="h-48 w-full"></div>
+          </div>
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 shadow-sm">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase mb-4">F. Heatmap (Grid Matrix)</h4>
+            <div id="statHeatmap" class="h-48 w-full"></div>
+          </div>
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 shadow-sm md:col-span-2 lg:col-span-3">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase mb-4">G. Scatter Plot</h4>
+            <div id="statScatter" class="h-48 w-full"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GENRE 2: INFORMATIONAL INFOGRAPHIC -->
+      <section id="genreSection2" class="genre-section hidden flex flex-col gap-6">
+        <div>
+          <h2 class="text-xl font-extrabold text-gray-900 dark:text-white">2. Informational Infographic (Infografis Informasi)</h2>
+          <p class="text-xs text-gray-500 mt-1">Menyajikan fakta, konsep, dan pedoman tanpa bergantung sepenuhnya pada grafik angka.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- List Infographic -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">A. List Infographic (Aturan Penilaian)</h4>
+            <ul class="flex flex-col gap-3">
+              <li class="flex items-start gap-3">
+                <span class="w-6 h-6 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center font-bold text-xs shrink-0">1</span>
+                <div>
+                  <h5 class="text-xs font-bold">Standardisasi Nopes</h5>
+                  <p class="text-[10px] text-gray-500 mt-0.5">Setiap santri wajib memiliki 5 digit nomor peserta.</p>
+                </div>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="w-6 h-6 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center font-bold text-xs shrink-0">2</span>
+                <div>
+                  <h5 class="text-xs font-bold">Tuntas KKM</h5>
+                  <p class="text-[10px] text-gray-500 mt-0.5">Nilai rata-rata minimal kelulusan adalah 60.</p>
+                </div>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="w-6 h-6 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center font-bold text-xs shrink-0">3</span>
+                <div>
+                  <h5 class="text-xs font-bold">Ketidakhadiran</h5>
+                  <p class="text-[10px] text-gray-500 mt-0.5">Mendapatkan skor penalti default 11 atau 13.</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <!-- Definition Infographic -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">B. Definition Infographic (Konsep KKM)</h4>
+            <div class="p-4 bg-gray-50 dark:bg-zinc-800/40 rounded-xl border border-gray-200/50 dark:border-zinc-800">
+              <span class="text-xs font-bold text-green-500">KKM</span>
+              <h5 class="text-sm font-extrabold mt-1">Kriteria Ketuntasan Minimal</h5>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
+                KKM adalah batas kriteria nilai paling rendah untuk menyatakan santri tuntas belajar. Pada penilaian ujian baca kitab Madin-MU, KKM ditentukan berdasarkan standar bacaan minimal (Tajwid, Makna Mufrodat, dan Pemahaman Murad).
+              </p>
+            </div>
+          </div>
+          <!-- Comparison Infographic -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider">C. Comparison Infographic</h4>
+            <div class="grid grid-cols-2 gap-4 divide-x divide-gray-200 dark:divide-zinc-800">
+              <div class="text-center pr-2">
+                <div class="text-xl">📖</div>
+                <h5 class="text-xs font-bold mt-1">Ujian Reguler</h5>
+                <p class="text-[9px] text-gray-500 mt-1">Dilakukan serentak di kelas secara tertulis dan lisan.</p>
+              </div>
+              <div class="text-center pl-4">
+                <div class="text-xl">🎙️</div>
+                <h5 class="text-xs font-bold mt-1">Ujian Praktek</h5>
+                <p class="text-[9px] text-gray-500 mt-1">Uji lisan membaca kitab kuning langsung di hadapan Masyayikh.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GENRE 3: TIMELINE INFOGRAPHIC -->
+      <section id="genreSection3" class="genre-section hidden flex flex-col gap-6">
+        <div>
+          <h2 class="text-xl font-extrabold text-gray-900 dark:text-white">3. Timeline Infographic</h2>
+          <p class="text-xs text-gray-500 mt-1">Menampilkan urutan kejadian, perkembangan nilai, atau jadwal kegiatan berdasarkan lini waktu.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Horizontal Timeline -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm lg:col-span-3 flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">A. Horizontal Timeline (Alur Pelaksanaan Ujian)</h4>
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6 mt-4 relative">
+              <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-200 dark:bg-zinc-800 hidden md:block z-0"></div>
+              <div class="flex flex-col items-center text-center z-10 bg-white dark:bg-[#18191b] px-3">
+                <span class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-xs shadow-md">1</span>
+                <span class="text-xs font-bold mt-2">Pendaftaran</span>
+                <span class="text-[9px] text-gray-400 mt-0.5">Input nomor peserta</span>
+              </div>
+              <div class="flex flex-col items-center text-center z-10 bg-white dark:bg-[#18191b] px-3">
+                <span class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-xs shadow-md">2</span>
+                <span class="text-xs font-bold mt-2">Verifikasi Data</span>
+                <span class="text-[9px] text-gray-400 mt-0.5">Cek kesesuaian kelas</span>
+              </div>
+              <div class="flex flex-col items-center text-center z-10 bg-white dark:bg-[#18191b] px-3">
+                <span class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-xs shadow-md">3</span>
+                <span class="text-xs font-bold mt-2">Pelaksanaan</span>
+                <span class="text-[9px] text-gray-400 mt-0.5">Ujian lisan & praktek</span>
+              </div>
+              <div class="flex flex-col items-center text-center z-10 bg-white dark:bg-[#18191b] px-3">
+                <span class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-xs shadow-md">4</span>
+                <span class="text-xs font-bold mt-2">Pengumuman</span>
+                <span class="text-[9px] text-gray-400 mt-0.5">Rekapitulasi KKM</span>
+              </div>
+            </div>
+          </div>
+          <!-- Vertical Timeline -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">B. Vertical Timeline (Riwayat Kelulusan)</h4>
+            <div class="flex flex-col gap-4 border-l-2 border-green-500/20 pl-4 ml-2 mt-2">
+              <div class="relative">
+                <div class="absolute -left-6 top-1.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-[#18191b]"></div>
+                <span class="text-[9px] text-gray-400 font-bold">TAHUN 2024</span>
+                <h5 class="text-xs font-bold mt-0.5">Rata-Rata Kelulusan 72.4%</h5>
+              </div>
+              <div class="relative">
+                <div class="absolute -left-6 top-1.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-[#18191b]"></div>
+                <span class="text-[9px] text-gray-400 font-bold">TAHUN 2025</span>
+                <h5 class="text-xs font-bold mt-0.5">Rata-Rata Kelulusan 76.8%</h5>
+              </div>
+              <div class="relative">
+                <div class="absolute -left-6 top-1.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-[#18191b]"></div>
+                <span class="text-[9px] text-gray-400 font-bold">TAHUN 2026</span>
+                <h5 class="text-xs font-bold mt-0.5">Target Kenaikan Kelulusan &gt; 80%</h5>
+              </div>
+            </div>
+          </div>
+          <!-- Spiral / Circular Timeline -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm lg:col-span-2 flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">C. Circular Timeline (Siklus Kegiatan)</h4>
+            <div id="circularTimelineChart" class="h-48 w-full"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GENRE 4: PROCESS INFOGRAPHIC -->
+      <section id="genreSection4" class="genre-section hidden flex flex-col gap-6">
+        <div>
+          <h2 class="text-xl font-extrabold text-gray-900 dark:text-white">4. Process Infographic</h2>
+          <p class="text-xs text-gray-500 mt-1">Visualisasi langkah-langkah kerja, instruksi kerja berurutan, dan siklus proses berulang.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Flowchart -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm flex flex-col gap-4 lg:col-span-2">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">A. Flowchart (Alur Keputusan Remedial)</h4>
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4 mt-4">
+              <div class="px-3 py-2 rounded-lg border border-gray-200 dark:border-zinc-800 text-xs font-semibold text-center w-full md:w-32 bg-gray-50 dark:bg-zinc-800/40">
+                Nilai Diinput
+              </div>
+              <span class="text-xs text-gray-400">➜</span>
+              <div class="px-3 py-3 rotate-45 rounded-lg border border-green-500/30 text-[10px] font-bold text-center w-20 h-20 flex items-center justify-center bg-green-500/10">
+                <span class="-rotate-45">Rata2 &ge; 60?</span>
+              </div>
+              <div class="flex flex-col gap-4 items-center justify-center">
+                <div class="px-3 py-2 rounded-lg border border-green-500 text-green-500 text-[10px] font-bold text-center w-28 bg-green-500/10">
+                  Tuntas (Lulus)
+                </div>
+                <div class="px-3 py-2 rounded-lg border border-red-500 text-red-500 text-[10px] font-bold text-center w-28 bg-red-500/10">
+                  Tidak Tuntas (Remid)
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Step-by-step -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">B. Step-by-Step (Unggah Data)</h4>
+            <div class="flex flex-col gap-3 mt-1 text-[11px]">
+              <div class="flex gap-2">
+                <span class="font-bold text-green-500">Langkah 1:</span>
+                <span>Unduh berkas template penilaian dari dasbor.</span>
+              </div>
+              <div class="flex gap-2">
+                <span class="font-bold text-green-500">Langkah 2:</span>
+                <span>Input nilai Sihhah, Mufrodat, dan Murad.</span>
+              </div>
+              <div class="flex gap-2">
+                <span class="font-bold text-green-500">Langkah 3:</span>
+                <span>Unggah berkas kembali ke kolom drag-and-drop.</span>
+              </div>
+            </div>
+          </div>
+          <!-- Cyclical Process -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm lg:col-span-3 flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">C. Cyclical/Circular Process (Siklus Mutu Pembelajaran)</h4>
+            <div id="cyclicalProcessChart" class="h-48 w-full"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GENRE 5: GEOGRAPHIC INFOGRAPHIC -->
+      <section id="genreSection5" class="genre-section hidden flex flex-col gap-6">
+        <div>
+          <h2 class="text-xl font-extrabold text-gray-900 dark:text-white">5. Geographic/Map-based Infographic</h2>
+          <p class="text-xs text-gray-500 mt-1">Mengaitkan sebaran data santri dan nilai dengan titik lokasi geografis asal daerah.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Location Marker Map -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">A. Location Marker Map</h4>
+            <div id="geoMarkerMap" class="h-52 w-full"></div>
+          </div>
+          <!-- Choropleth Map -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase mb-4">B. Choropleth Map (Distribusi Wilayah)</h4>
+            <div id="geoChoroplethMap" class="h-52 w-full"></div>
+          </div>
+          <!-- Geographic Heat Map -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase mb-4">C. Geographic Heat Map (Kepadatan Santri)</h4>
+            <div id="geoHeatMap" class="h-52 w-full"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GENRE 6: HIERARCHICAL INFOGRAPHIC -->
+      <section id="genreSection6" class="genre-section hidden flex flex-col gap-6">
+        <div>
+          <h2 class="text-xl font-extrabold text-gray-900 dark:text-white">6. Hierarchical Infographic</h2>
+          <p class="text-xs text-gray-500 mt-1">Menampilkan struktur data yang tersusun secara bertingkat, silsilah organisasi, dan mind map bercabang.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Org Chart -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm lg:col-span-2 flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">A. Organizational Chart (Struktur Penguji Madin)</h4>
+            <div class="flex flex-col items-center gap-4 mt-2">
+              <div class="px-4 py-2 border border-green-500 text-green-500 rounded-lg text-xs font-bold bg-green-500/10">
+                USTADZ FIRRUL AZIZ (Asuhan Utama)
+              </div>
+              <div class="w-0.5 h-4 bg-gray-200 dark:bg-zinc-800"></div>
+              <div class="flex gap-8">
+                <div class="px-4 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg text-xs font-bold bg-gray-50 dark:bg-zinc-800/40">
+                  Ust. Ahmad (Penguji 1)
+                </div>
+                <div class="px-4 py-2 border border-gray-200 dark:border-zinc-800 rounded-lg text-xs font-bold bg-gray-50 dark:bg-zinc-800/40">
+                  Ust. Sholahuddin (Penguji 2)
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Pyramid Infographic -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">B. Pyramid Chart (Hierarki Prioritas Kitab)</h4>
+            <div id="pyramidChart" class="h-48 w-full"></div>
+          </div>
+          <!-- Tree Diagram -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">C. Tree Diagram</h4>
+            <div id="treeChart" class="h-48 w-full"></div>
+          </div>
+          <!-- Mind Map -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm lg:col-span-2 flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">D. Mind Map (Struktur Evaluasi Ujian)</h4>
+            <div id="mindmapChart" class="h-48 w-full"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GENRE 7: COMPARISON INFOGRAPHIC -->
+      <section id="genreSection7" class="genre-section hidden flex flex-col gap-6">
+        <div>
+          <h2 class="text-xl font-extrabold text-gray-900 dark:text-white">7. Comparison Infographic</h2>
+          <p class="text-xs text-gray-500 mt-1">Membandingkan dua entitas atau lebih secara berdampingan (side-by-side) serta irisan kelompok data.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Versus (VS) Infographic -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">A. Versus (VS) (Kelas I A vs Kelas I B)</h4>
+            <div class="flex items-center justify-between mt-4">
+              <div class="text-center">
+                <span class="text-xl font-extrabold text-green-500">I A</span>
+                <p class="text-[10px] text-gray-500 mt-1">Tuntas: 74%</p>
+                <p class="text-[10px] text-gray-500 mt-0.5">Rata-rata: 78</p>
+              </div>
+              <div class="text-center font-bold text-gray-400 text-xs">VS</div>
+              <div class="text-center">
+                <span class="text-xl font-extrabold text-blue-500">I B</span>
+                <p class="text-[10px] text-gray-500 mt-1">Tuntas: 80%</p>
+                <p class="text-[10px] text-gray-500 mt-0.5">Rata-rata: 81</p>
+              </div>
+            </div>
+          </div>
+          <!-- Table Comparison -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm lg:col-span-2 flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">B. Table Comparison</h4>
+            <div class="overflow-x-auto border border-gray-200 dark:border-zinc-800 rounded-lg">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="bg-gray-50 dark:bg-zinc-800/40 text-gray-500 border-b border-gray-200 dark:border-zinc-800">
+                    <th class="p-2.5">Kategori Ujian</th>
+                    <th class="p-2.5 text-center">Tajwid</th>
+                    <th class="p-2.5 text-center">Sastra/Makna</th>
+                    <th class="p-2.5 text-center">Pemahaman</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-zinc-800">
+                  <tr>
+                    <td class="p-2.5 font-bold">Ujian Basah (Lisan)</td>
+                    <td class="p-2.5 text-center text-green-500">✓</td>
+                    <td class="p-2.5 text-center text-green-500">✓</td>
+                    <td class="p-2.5 text-center text-green-500">✓</td>
+                  </tr>
+                  <tr>
+                    <td class="p-2.5 font-bold">Ujian Tulis</td>
+                    <td class="p-2.5 text-center text-red-500">✗</td>
+                    <td class="p-2.5 text-center text-green-500">✓</td>
+                    <td class="p-2.5 text-center text-green-500">✓</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Venn Diagram -->
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-6 shadow-sm lg:col-span-3 flex flex-col gap-4">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">C. Venn Diagram (Irisan Karakteristik Nilai)</h4>
+            <div class="h-48 relative flex items-center justify-center mt-2">
+              <div class="absolute w-32 h-32 rounded-full bg-green-500/20 border border-green-500 mix-blend-multiply dark:mix-blend-screen flex items-center justify-start pl-4" style="left: calc(50% - 70px);">
+                <span class="text-[9px] font-bold text-green-500">Tuntas Aspek 1</span>
+              </div>
+              <div class="absolute w-32 h-32 rounded-full bg-blue-500/20 border border-blue-500 mix-blend-multiply dark:mix-blend-screen flex items-center justify-end pr-4" style="right: calc(50% - 70px);">
+                <span class="text-[9px] font-bold text-blue-500">Tuntas Aspek 2</span>
+              </div>
+              <div class="absolute z-10 text-[10px] font-extrabold text-green-600 dark:text-green-300">
+                Irisan (55%)
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GENRE 8: RELATIONAL / NETWORK INFOGRAPHIC -->
+      <section id="genreSection8" class="genre-section hidden flex flex-col gap-6">
+        <div>
+          <h2 class="text-xl font-extrabold text-gray-900 dark:text-white">8. Relational / Network Infographic</h2>
+          <p class="text-xs text-gray-500 mt-1">Menggambarkan relasi hubungan timbal balik antar elemen data dan peta alokasi kuantitas.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 flex flex-col gap-4 shadow-sm">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">A. Network Diagram</h4>
+            <div id="relNetwork" class="h-48 w-full"></div>
+          </div>
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 flex flex-col gap-4 shadow-sm">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">B. Sankey Diagram</h4>
+            <div id="relSankey" class="h-48 w-full"></div>
+          </div>
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 flex flex-col gap-4 shadow-sm">
+            <h4 class="text-xs font-bold text-gray-900 dark:text-white uppercase">C. Chord Diagram (Relasi Sirkular)</h4>
+            <div id="relChord" class="h-48 w-full"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- GENRE 9: DASHBOARD-STYLE INFOGRAPHIC -->
+      <section id="genreSection9" class="genre-section hidden flex flex-col gap-6">
+        <div>
+          <h2 class="text-xl font-extrabold text-gray-900 dark:text-white">9. Dashboard-style Infographic</h2>
+          <p class="text-xs text-gray-500 mt-1">Kombinasi dasbor eksekutif untuk monitoring nilai secara terpusat, cepat, dan real-time.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 shadow-sm">
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">A. Gauge Chart</span>
+            <div id="dashGauge" class="h-32 w-full mt-2"></div>
+          </div>
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 shadow-sm">
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">B. Mini Sparkline</span>
+            <div class="flex items-baseline gap-1 mt-4">
+              <span class="text-4xl font-extrabold">79.2</span>
+              <span class="text-xs text-gray-500 font-semibold">Poin</span>
+            </div>
+            <div class="h-10 w-full mt-4" id="dashSparkline"></div>
+          </div>
+          <div class="bg-white dark:bg-[#18191b] border border-gray-200 dark:border-[#27292c] rounded-xl p-5 shadow-sm lg:col-span-2">
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">C. Stacked Progress Bar</span>
+            <div class="h-5 w-full rounded-full bg-gray-100 dark:bg-zinc-800 overflow-hidden flex mt-6">
+              <div class="bg-green-500 h-full" style="width: 70%" title="Tuntas"></div>
+              <div class="bg-red-500 h-full" style="width: 22%" title="Tidak Tuntas"></div>
+              <div class="bg-gray-400 dark:bg-zinc-600 h-full" style="width: 8%" title="Absen"></div>
+            </div>
+            <div class="flex gap-4 mt-6 text-[10px] font-semibold text-gray-500">
+              <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500"></span><span>Tuntas (70%)</span></div>
+              <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span><span>Tidak Tuntas (22%)</span></div>
+              <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gray-400 dark:bg-zinc-600"></span><span>Absen (8%)</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // --- DESIGN THEME CONFIGURATION ---
+    const getThemeConfig = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      return {
+        text: isDark ? '#f4f4f5' : '#18181b',
+        textMuted: isDark ? '#a1a1aa' : '#71717a',
+        border: isDark ? '#27292c' : '#e5e7eb',
+        bgCard: isDark ? '#18191b' : '#ffffff',
+        primary: isDark ? '#22c55e' : '#16a34a',
+        danger: isDark ? '#f87171' : '#dc2626',
+        warning: isDark ? '#facc15' : '#eab308',
+        neutral: isDark ? '#a1a1aa' : '#71717a',
+        gridLine: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+      };
+    };
+
+    let theme = getThemeConfig();
+    let activeCharts = [];
+
+    const clearActiveCharts = () => {
+      activeCharts.forEach(c => c.dispose());
+      activeCharts = [];
+    };
+
+    // --- GENRE SWITCHER ---
+    const switchGenre = (genreId) => {
+      // Update sidebar styling
+      document.querySelectorAll('.genre-btn').forEach(btn => {
+        btn.classList.remove('bg-green-500/10', 'text-green-500', 'border-green-500/20');
+        btn.classList.add('hover:bg-gray-50', 'dark:hover:bg-zinc-800', 'border-transparent', 'text-gray-600', 'dark:text-gray-300');
+      });
+      const activeBtn = document.querySelector(`.genre-btn[data-genre="${genreId}"]`);
+      activeBtn.classList.remove('hover:bg-gray-50', 'dark:hover:bg-zinc-800', 'border-transparent', 'text-gray-600', 'dark:text-gray-300');
+      activeBtn.classList.add('bg-green-500/10', 'text-green-500', 'border-green-500/20');
+
+      // Update sections visibility
+      document.querySelectorAll('.genre-section').forEach(sec => sec.classList.add('hidden'));
+      document.getElementById(`genreSection${genreId}`).classList.remove('hidden');
+
+      // Initialize charts of active section
+      clearActiveCharts();
+      initGenreCharts(genreId);
+    };
+
+    // --- INITIALIZE CHARTS BASED ON GENRE ---
+    const initGenreCharts = (genreId) => {
+      if (genreId === 1) {
+        // Genre 1: Statistical
+        const c1 = echarts.init(document.getElementById('statDonut'));
+        c1.setOption({
+          tooltip: { trigger: 'item' },
+          series: [{
+            type: 'pie', radius: ['50%', '70%'], avoidLabelOverlap: false,
+            data: [
+              { value: 315, name: 'Tuntas', itemStyle: { color: theme.primary } },
+              { value: 99, name: 'Gagal', itemStyle: { color: theme.danger } },
+              { value: 36, name: 'Absen', itemStyle: { color: theme.neutral } }
+            ],
+            label: { show: false }
+          }]
+        });
+        activeCharts.push(c1);
+
+        const c2 = echarts.init(document.getElementById('statBar'));
+        c2.setOption({
+          tooltip: { trigger: 'axis' },
+          grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
+          xAxis: { type: 'category', data: ['Sihhah', 'Mufrodat', 'Murad'], axisLabel: { color: theme.text } },
+          yAxis: { type: 'value', splitLine: { lineStyle: { color: theme.gridLine } }, axisLabel: { color: theme.textMuted } },
+          series: [{ type: 'bar', barWidth: '40%', data: [78.5, 82.3, 65.1], itemStyle: { color: theme.primary, borderRadius: [4, 4, 0, 0] } }]
+        });
+        activeCharts.push(c2);
+
+        const c3 = echarts.init(document.getElementById('statLine'));
+        c3.setOption({
+          tooltip: { trigger: 'axis' },
+          grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
+          xAxis: { type: 'category', data: ['Ses. 1', 'Ses. 2', 'Ses. 3', 'Ses. 4'], axisLabel: { color: theme.text } },
+          yAxis: { type: 'value', splitLine: { lineStyle: { color: theme.gridLine } }, axisLabel: { color: theme.textMuted } },
+          series: [{ type: 'line', data: [58, 62, 70, 78], lineStyle: { width: 3, color: '#3b82f6' }, itemStyle: { color: '#3b82f6' } }]
+        });
+        activeCharts.push(c3);
+
+        const c4 = echarts.init(document.getElementById('statArea'));
+        c4.setOption({
+          tooltip: { trigger: 'axis' },
+          grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
+          xAxis: { type: 'category', boundaryGap: false, data: ['0-20', '21-40', '41-60', '61-80', '81-100'], axisLabel: { color: theme.text } },
+          yAxis: { type: 'value', splitLine: { lineStyle: { color: theme.gridLine } }, axisLabel: { color: theme.textMuted } },
+          series: [{
+            type: 'line', smooth: true, data: [15, 30, 95, 201, 80],
+            lineStyle: { width: 3, color: theme.primary }, itemStyle: { color: theme.primary },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(22, 163, 74, 0.4)' },
+                { offset: 1, color: 'rgba(22, 163, 74, 0)' }
+              ])
+            }
+          }]
+        });
+        activeCharts.push(c4);
+
+        const c5 = echarts.init(document.getElementById('statRadar'));
+        c5.setOption({
+          radar: {
+            indicator: [{ name: 'Sihhah', max: 100 }, { name: 'Mufrodat', max: 100 }, { name: 'Murad', max: 100 }, { name: 'Adab', max: 100 }, { name: 'Hadir', max: 100 }],
+            axisName: { color: theme.text, fontSize: 8 }, splitLine: { lineStyle: { color: theme.gridLine } }, splitArea: { show: false }
+          },
+          series: [{
+            type: 'radar',
+            data: [{ value: [82, 75, 60, 90, 85], name: 'Kinerja', itemStyle: { color: theme.primary }, areaStyle: { color: 'rgba(22, 163, 74, 0.2)' } }]
+          }]
+        });
+        activeCharts.push(c5);
+
+        const c6 = echarts.init(document.getElementById('statHeatmap'));
+        c6.setOption({
+          grid: { height: '65%', top: '10%' },
+          xAxis: { type: 'category', data: ['Sihhah', 'Mufrodat', 'Murad'], axisLabel: { color: theme.text } },
+          yAxis: { type: 'category', data: ['IA', 'IB', 'IIA'], axisLabel: { color: theme.textMuted } },
+          visualMap: { min: 0, max: 100, show: false, inRange: { color: ['#fef2f2', '#fca5a5', '#ef4444'] } },
+          series: [{
+            type: 'heatmap',
+            data: [[0,0,75],[1,0,80],[2,0,85],[0,1,60],[1,1,72],[2,1,79],[0,2,85],[1,2,60],[2,2,70]],
+            label: { show: true, fontSize: 9 }
+          }]
+        });
+        activeCharts.push(c6);
+
+        const c7 = echarts.init(document.getElementById('statScatter'));
+        c7.setOption({
+          tooltip: { trigger: 'item' },
+          grid: { left: '3%', right: '4%', bottom: '3%', top: '10%', containLabel: true },
+          xAxis: { type: 'value', splitLine: { lineStyle: { color: theme.gridLine } }, axisLabel: { color: theme.text } },
+          yAxis: { type: 'value', splitLine: { lineStyle: { color: theme.gridLine } }, axisLabel: { color: theme.textMuted } },
+          series: [{
+            type: 'scatter', symbolSize: 12,
+            data: [[2.5, 45], [3.0, 52], [4.5, 68], [6.0, 78], [7.2, 85], [8.5, 92]],
+            itemStyle: { color: theme.primary }
+          }]
+        });
+        activeCharts.push(c7);
+
+      } else if (genreId === 3) {
+        // Genre 3: Timeline - Circular Timeline
+        const c1 = echarts.init(document.getElementById('circularTimelineChart'));
+        c1.setOption({
+          angleAxis: { type: 'category', data: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun'], startAngle: 90, axisLabel: { color: theme.text } },
+          radiusAxis: { max: 10 }, polar: { radius: '65%' },
+          series: [{
+            type: 'bar', data: [2, 4, 6, 8, 5, 9], coordinateSystem: 'polar',
+            name: 'Agenda Bulanan', itemStyle: { color: theme.primary }
+          }]
+        });
+        activeCharts.push(c1);
+
+      } else if (genreId === 4) {
+        // Genre 4: Process - Cyclical Process
+        const c1 = echarts.init(document.getElementById('cyclicalProcessChart'));
+        c1.setOption({
+          angleAxis: { type: 'category', data: ['Evaluasi', 'Perbaikan', 'Pengajaran', 'Ujian'], startAngle: 90, axisLabel: { color: theme.text } },
+          radiusAxis: { max: 100, axisLabel: { show: false } }, polar: { radius: '70%' },
+          series: [{
+            type: 'line', coordinateSystem: 'polar', data: [80, 80, 80, 80],
+            lineStyle: { width: 3, color: '#3b82f6' }, itemStyle: { color: '#3b82f6' }
+          }]
+        });
+        activeCharts.push(c1);
+
+      } else if (genreId === 5) {
+        // Genre 5: Geographic
+        const c1 = echarts.init(document.getElementById('geoMarkerMap'));
+        c1.setOption({
+          tooltip: {},
+          xAxis: { show: false, min: 0, max: 100 }, yAxis: { show: false, min: 0, max: 100 },
+          series: [
+            {
+              type: 'scatter', symbolSize: 15,
+              data: [[20, 30], [50, 60], [80, 40]], // Mock map coordinate markers
+              itemStyle: { color: theme.primary }
+            }
+          ]
+        });
+        activeCharts.push(c1);
+
+        const c2 = echarts.init(document.getElementById('geoChoroplethMap'));
+        c2.setOption({
+          xAxis: { show: false, min: 0, max: 100 }, yAxis: { show: false, min: 0, max: 100 },
+          series: [{
+            type: 'heatmap', coordinateSystem: 'cartesian2d',
+            data: [[10, 20, 70], [30, 40, 90], [70, 80, 50]]
+          }]
+        });
+        activeCharts.push(c2);
+
+        const c3 = echarts.init(document.getElementById('geoHeatMap'));
+        c3.setOption({
+          xAxis: { show: false, min: 0, max: 100 }, yAxis: { show: false, min: 0, max: 100 },
+          series: [{
+            type: 'scatter', symbolSize: 25,
+            data: [[30, 30], [60, 50]],
+            itemStyle: { color: 'rgba(239, 68, 68, 0.4)' }
+          }]
+        });
+        activeCharts.push(c3);
+
+      } else if (genreId === 6) {
+        // Genre 6: Hierarchical
+        const c1 = echarts.init(document.getElementById('pyramidChart'));
+        c1.setOption({
+          series: [{
+            type: 'funnel', sort: 'ascending', left: '15%', right: '15%',
+            data: [
+              { value: 20, name: 'Mubtadi\' (Dasar)', itemStyle: { color: theme.danger } },
+              { value: 50, name: 'Mutawassit (Menengah)', itemStyle: { color: theme.warning } },
+              { value: 80, name: 'Ali (Tinggi)', itemStyle: { color: theme.primary } }
+            ]
+          }]
+        });
+        activeCharts.push(c1);
+
+        const c2 = echarts.init(document.getElementById('treeChart'));
+        c2.setOption({
+          series: [{
+            type: 'tree',
+            data: [{
+              name: 'Root',
+              children: [
+                { name: 'Node A', children: [{ name: 'A1' }, { name: 'A2' }] },
+                { name: 'Node B' }
+              ]
+            }],
+            label: { color: theme.text, fontSize: 8 }
+          }]
+        });
+        activeCharts.push(c2);
+
+        const c3 = echarts.init(document.getElementById('mindmapChart'));
+        c3.setOption({
+          series: [{
+            type: 'tree', layout: 'radial',
+            data: [{
+              name: 'Evaluasi',
+              children: [{ name: 'Tajwid' }, { name: 'Mufrodat' }, { name: 'Murad' }]
+            }],
+            label: { color: theme.text, fontSize: 8 }
+          }]
+        });
+        activeCharts.push(c3);
+
+      } else if (genreId === 8) {
+        // Genre 8: Relational
+        const c1 = echarts.init(document.getElementById('relNetwork'));
+        c1.setOption({
+          series: [{
+            type: 'graph', layout: 'force', symbolSize: 20, roam: true,
+            data: [{ name: 'A' }, { name: 'B' }, { name: 'C' }],
+            links: [{ source: 'A', target: 'B' }, { source: 'B', target: 'C' }]
+          }]
+        });
+        activeCharts.push(c1);
+
+        const c2 = echarts.init(document.getElementById('relSankey'));
+        c2.setOption({
+          series: [{
+            type: 'sankey', layout: 'none',
+            data: [{ name: 'In' }, { name: 'Out' }],
+            links: [{ source: 'In', target: 'Out', value: 10 }]
+          }]
+        });
+        activeCharts.push(c2);
+
+        const c3 = echarts.init(document.getElementById('relChord'));
+        c3.setOption({
+          series: [{
+            type: 'graph', layout: 'circular', symbolSize: 20,
+            data: [{ name: 'A' }, { name: 'B' }, { name: 'C' }],
+            links: [{ source: 'A', target: 'B' }, { source: 'B', target: 'C' }, { source: 'C', target: 'A' }]
+          }]
+        });
+        activeCharts.push(c3);
+
+      } else if (genreId === 9) {
+        // Genre 9: Dashboard
+        const c1 = echarts.init(document.getElementById('dashGauge'));
+        c1.setOption({
+          series: [{
+            type: 'gauge', startAngle: 180, endAngle: 0, radius: '95%', center: ['50%', '75%'],
+            progress: { show: true, itemStyle: { color: theme.primary } },
+            axisLine: { lineStyle: { width: 6, color: [[1, theme.border]] } },
+            axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false },
+            detail: { formatter: '{value}%', color: theme.text, fontSize: 13, offsetCenter: [0, -10] },
+            data: [{ value: 70.0 }]
+          }]
+        });
+        activeCharts.push(c1);
+
+        const c2 = echarts.init(document.getElementById('dashSparkline'));
+        c2.setOption({
+          grid: { left: 0, right: 0, top: 0, bottom: 0 },
+          xAxis: { type: 'category', show: false },
+          yAxis: { type: 'value', show: false },
+          series: [{
+            type: 'line', smooth: true, data: [30, 45, 35, 60, 50, 75, 79.2],
+            lineStyle: { color: theme.primary, width: 2 }, showSymbol: false,
+            areaStyle: { color: 'rgba(22, 163, 74, 0.15)' }
+          }]
+        });
+        activeCharts.push(c2);
+      }
+    };
+
+    // --- RE-INITIALIZE ON THEME TOGGLE ---
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const html = document.documentElement;
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+      } else {
+        html.classList.add('dark');
+      }
+      theme = getThemeConfig();
+      // Re-init current active genre charts
+      const activeBtn = document.querySelector('.genre-btn.bg-green-500\\/10');
+      if (activeBtn) {
+        const genreId = parseInt(activeBtn.getAttribute('data-genre'));
+        switchGenre(genreId);
+      }
+    });
+
+    // Handle Resize
+    window.addEventListener('resize', () => {
+      activeCharts.forEach(c => c.resize());
+    });
+
+    // Start with Genre 1 on load
+    switchGenre(1);
+  </script>
+</body>
+</html>

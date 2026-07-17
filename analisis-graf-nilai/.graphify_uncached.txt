@@ -1,0 +1,7 @@
+D:\Downloads\Nilai Madin-MU_files\README.md
+D:\Downloads\Nilai Madin-MU_files\index.html
+D:\Downloads\Nilai Madin-MU_files\public\favicon.svg
+D:\Downloads\Nilai Madin-MU_files\public\icons.svg
+D:\Downloads\Nilai Madin-MU_files\src\assets\hero.png
+D:\Downloads\Nilai Madin-MU_files\src\assets\react.svg
+D:\Downloads\Nilai Madin-MU_files\src\assets\vite.svg
