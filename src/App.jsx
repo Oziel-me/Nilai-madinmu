@@ -417,7 +417,19 @@ const PDFExportMenu = ({ onExport, isExporting }) => {
 function App() {
   // --- STATE MANAGEMENT ---
   const [records, setRecords] = useState([]);
-  const [filterMode, setFilterMode] = useState('kelas'); // kelas | jenjang
+  const [datasets, setDatasets] = useState([]);
+  const [pendingDataset, setPendingDataset] = useState(null);
+  
+  const [activeYear, setActiveYear] = useState('');
+  const [activeExam, setActiveExam] = useState('');
+  const [activeQuarter, setActiveQuarter] = useState('');
+
+  const [compareYear, setCompareYear] = useState('');
+  const [compareExam, setCompareExam] = useState('');
+  const [compareQuarter, setCompareQuarter] = useState('');
+
+  const [filterMode, setFilterMode] = useState('kelas'); // kelas | jenjang | perbandingan_kuartal | perbandingan_ujian | perbandingan_tahun
+  const [yearlyChartModel, setYearlyChartModel] = useState('line'); // line | stacked_bar | grouped_bar
   const [selectedKelas, setSelectedKelas] = useState('I A');
   const [selectedJenjang, setSelectedJenjang] = useState('I');
   const [pctBasis, setPctBasis] = useState('total'); // total | dinilai
@@ -432,6 +444,8 @@ function App() {
   const [printMode, setPrintMode] = useState(null); // null | 'all' | 'charts' | 'data'
   const [isExporting, setIsExporting] = useState(false);
   const fileInputRef = useRef(null);
+  
+  // Chart refs
   const donutChartRef = useRef(null);
   const barChartRef = useRef(null);
   const keseluruhanChartRef = useRef(null);
@@ -439,6 +453,11 @@ function App() {
   const tidakTuntasChartRef = useRef(null);
   const tuntasAtas70ChartRef = useRef(null);
   const tuntasBawah70ChartRef = useRef(null);
+  
+  // New comparison chart refs
+  const quarterComparisonChartRef = useRef(null);
+  const examComparisonChartRef = useRef(null);
+  const yearlyTrendChartRef = useRef(null);
 
   const itemsPerPage = 8;
 
@@ -452,14 +471,44 @@ function App() {
     }
   }, [darkMode]);
 
-  // Extract Lists
+  // Derived available metadata options
+  const availableYears = useMemo(() => [...new Set(datasets.map(d => d.year))].sort(), [datasets]);
+  const availableExams = useMemo(() => [...new Set(datasets.map(d => d.examType))].sort(), [datasets]);
+  const availableQuarters = useMemo(() => [...new Set(datasets.map(d => d.quarter))].sort(), [datasets]);
+
+  // Sync selectors when datasets load
+  useEffect(() => {
+    if (availableYears.length > 0) {
+      if (!activeYear || !availableYears.includes(activeYear)) setActiveYear(availableYears[0]);
+      if (!compareYear || !availableYears.includes(compareYear)) setCompareYear(availableYears[0]);
+    }
+    if (availableExams.length > 0) {
+      if (!activeExam || !availableExams.includes(activeExam)) setActiveExam(availableExams[0]);
+      if (!compareExam || !availableExams.includes(compareExam)) setCompareExam(availableExams[0]);
+    }
+    if (availableQuarters.length > 0) {
+      if (!activeQuarter || !availableQuarters.includes(activeQuarter)) setActiveQuarter(availableQuarters[0]);
+      if (!compareQuarter || !availableQuarters.includes(compareQuarter)) setCompareQuarter(availableQuarters[0]);
+    }
+  }, [datasets, availableYears, availableExams, availableQuarters]);
+
+  // Filter records based on active filters for single-view analysis
+  const filteredByMetaRecords = useMemo(() => {
+    let result = records;
+    if (activeYear) result = result.filter(r => r.tahun === activeYear);
+    if (activeExam) result = result.filter(r => r.ujian === activeExam);
+    if (activeQuarter) result = result.filter(r => r.kuartal === activeQuarter);
+    return result;
+  }, [records, activeYear, activeExam, activeQuarter]);
+
+  // Extract Lists from filtered subset
   const kelasList = useMemo(() => {
-    return [...new Set(records.map(r => r.kelas))].sort();
-  }, [records]);
+    return [...new Set(filteredByMetaRecords.map(r => r.kelas))].sort();
+  }, [filteredByMetaRecords]);
 
   const jenjangList = useMemo(() => {
-    return [...new Set(records.map(r => r.jenjang))].sort();
-  }, [records]);
+    return [...new Set(filteredByMetaRecords.map(r => r.jenjang))].sort();
+  }, [filteredByMetaRecords]);
 
   // Sync selection when records load
   useEffect(() => {
@@ -469,17 +518,16 @@ function App() {
     if (jenjangList.length > 0 && !jenjangList.includes(selectedJenjang)) {
       setSelectedJenjang(jenjangList[0]);
     }
-  }, [records, kelasList, jenjangList]);
-
+  }, [filteredByMetaRecords, kelasList, jenjangList]);
 
   // Filter records based on selected view (Kelas / Jenjang)
   const currentRecords = useMemo(() => {
     if (filterMode === 'kelas') {
-      return records.filter(r => r.kelas === selectedKelas);
+      return filteredByMetaRecords.filter(r => r.kelas === selectedKelas);
     } else {
-      return records.filter(r => r.jenjang === selectedJenjang);
+      return filteredByMetaRecords.filter(r => r.jenjang === selectedJenjang);
     }
-  }, [records, filterMode, selectedKelas, selectedJenjang]);
+  }, [filteredByMetaRecords, filterMode, selectedKelas, selectedJenjang]);
 
   // --- LOGIC CALCULATOR (Core Business Rules) ---
   const stats = useMemo(() => {
@@ -609,8 +657,36 @@ function App() {
         });
 
         if (allRecords.length > 0) {
-          setRecords(allRecords);
-          setCurrentPage(1);
+          // Metadata Auto Detection
+          let detectedYear = '46-47 H';
+          let detectedExam = 'MTSD';
+          let detectedQuarter = 'K1';
+
+          // Extract year: 46-47 H, 45-46 H, etc.
+          const yearMatch = file.name.match(/([0-9]{2}-[0-9]{2}\s*H)/i);
+          if (yearMatch) {
+            detectedYear = yearMatch[1].toUpperCase();
+          }
+
+          // Extract exam type: MID or MTSD
+          const examMatch = file.name.match(/(MID|MTSD|AKHIR|SEMESTER\s*[0-9]+)/i);
+          if (examMatch) {
+            detectedExam = examMatch[1].toUpperCase();
+          }
+
+          // Extract quarter: K1, K2, K3, etc.
+          const quarterMatch = file.name.match(/(K[0-9]+)/i);
+          if (quarterMatch) {
+            detectedQuarter = quarterMatch[1].toUpperCase();
+          }
+
+          setPendingDataset({
+            fileName: file.name,
+            records: allRecords,
+            year: detectedYear,
+            exam: detectedExam,
+            quarter: detectedQuarter
+          });
         } else {
           alert('Format tabel tidak sesuai! Pastikan terdapat kolom NOPES, NAMA, dan KKM.');
         }
@@ -620,6 +696,53 @@ function App() {
       }
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  const handleConfirmDataset = (year, exam, quarter) => {
+    if (!pendingDataset) return;
+    
+    const datasetId = Date.now().toString();
+    const newRecords = pendingDataset.records.map(r => ({
+      ...r,
+      datasetId,
+      tahun: year,
+      ujian: exam,
+      kuartal: quarter
+    }));
+
+    // Remove existing dataset with same year, exam, quarter to allow overwriting
+    const existingDataset = datasets.find(d => d.year === year && d.examType === exam && d.quarter === quarter);
+    if (existingDataset) {
+      setRecords(prev => prev.filter(r => r.datasetId !== existingDataset.id).concat(newRecords));
+      setDatasets(prev => prev.filter(d => d.id !== existingDataset.id).concat({
+        id: datasetId,
+        name: pendingDataset.fileName,
+        year,
+        examType: exam,
+        quarter,
+        recordCount: pendingDataset.records.length
+      }));
+    } else {
+      setRecords(prev => [...prev, ...newRecords]);
+      setDatasets(prev => [...prev, {
+        id: datasetId,
+        name: pendingDataset.fileName,
+        year,
+        examType: exam,
+        quarter,
+        recordCount: pendingDataset.records.length
+      }]);
+    }
+
+    setActiveYear(year);
+    setActiveExam(exam);
+    setActiveQuarter(quarter);
+    setPendingDataset(null);
+  };
+
+  const handleDeleteDataset = (id) => {
+    setRecords(prev => prev.filter(r => r.datasetId !== id));
+    setDatasets(prev => prev.filter(d => d.id !== id));
   };
 
   const handleDrag = (e) => {
@@ -699,6 +822,7 @@ function App() {
 
   const handleResetData = () => {
     setRecords(DEFAULT_RECORDS);
+    setDatasets([]);
     setFileName('');
     setCurrentPage(1);
   };
@@ -918,18 +1042,246 @@ function App() {
             fontSize: 9,
             fontWeight: 'medium'
           },
-          animationDuration: 350,
           animationEasing: 'cubicOut'
         }
       ]
     };
   }, [filterMode, records, selectedJenjang, pctBasis, currentRecords, themeColors, darkMode]);
 
+  // Derived helper for classes within the currently selected jenjang
+  const classesInSelectedJenjang = useMemo(() => {
+    return [...new Set(records.filter(r => r.jenjang === selectedJenjang).map(r => r.kelas))].sort();
+  }, [records, selectedJenjang]);
+
+  // Quarter comparison chart options
+  const quarterComparisonOptions = useMemo(() => {
+    const activeQuarters = [...new Set(records.filter(r => r.tahun === compareYear && r.ujian === compareExam).map(r => r.kuartal))].sort();
+    const seriesList = activeQuarters.map(q => {
+      const data = classesInSelectedJenjang.map(cls => {
+        const classRecs = records.filter(r => r.tahun === compareYear && r.ujian === compareExam && r.kuartal === q && r.kelas === cls);
+        const total = classRecs.length;
+        const dinilai = classRecs.filter(r => r.kkm !== 'TIDAK HADIR' && r.kkm !== 'TIDAK BACA');
+        const tuntas = dinilai.filter(r => r.kkm === 'TUNTAS');
+        const denom = pctBasis === 'total' ? total : dinilai.length;
+        const tuntasPct = denom === 0 ? 0 : +(tuntas.length / denom * 100).toFixed(1);
+        return tuntasPct;
+      });
+      return {
+        name: `Kuartal ${q}`,
+        type: 'bar',
+        barGap: 0,
+        label: { show: true, position: 'top', formatter: '{c}%', fontSize: 9, color: themeColors.text },
+        data
+      };
+    });
+    return {
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { bottom: 5, data: activeQuarters.map(q => `Kuartal ${q}`), textStyle: { color: themeColors.text } },
+      grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
+      xAxis: { type: 'category', data: classesInSelectedJenjang, axisLabel: { color: themeColors.text } },
+      yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: themeColors.textMuted }, splitLine: { lineStyle: { type: 'dashed', color: themeColors.border } } },
+      series: seriesList
+    };
+  }, [records, compareYear, compareExam, selectedJenjang, classesInSelectedJenjang, pctBasis, themeColors]);
+
+  // Exam comparison chart options
+  const examComparisonOptions = useMemo(() => {
+    const examTypes = ['MID', 'MTSD'];
+    const seriesList = examTypes.map(exam => {
+      const data = classesInSelectedJenjang.map(cls => {
+        const classRecs = records.filter(r => r.tahun === compareYear && r.ujian === exam && r.kuartal === compareQuarter && r.kelas === cls);
+        const total = classRecs.length;
+        const dinilai = classRecs.filter(r => r.kkm !== 'TIDAK HADIR' && r.kkm !== 'TIDAK BACA');
+        const tuntas = dinilai.filter(r => r.kkm === 'TUNTAS');
+        const denom = pctBasis === 'total' ? total : dinilai.length;
+        const tuntasPct = denom === 0 ? 0 : +(tuntas.length / denom * 100).toFixed(1);
+        return tuntasPct;
+      });
+      return {
+        name: exam === 'MID' ? 'Ujian Tengah Semester (MID)' : 'Ujian Akhir (MTSD)',
+        type: 'bar',
+        barGap: 0,
+        label: { show: true, position: 'top', formatter: '{c}%', fontSize: 9, color: themeColors.text },
+        data
+      };
+    });
+    return {
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { bottom: 5, data: ['Ujian Tengah Semester (MID)', 'Ujian Akhir (MTSD)'], textStyle: { color: themeColors.text } },
+      grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
+      xAxis: { type: 'category', data: classesInSelectedJenjang, axisLabel: { color: themeColors.text } },
+      yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: themeColors.textMuted }, splitLine: { lineStyle: { type: 'dashed', color: themeColors.border } } },
+      series: seriesList
+    };
+  }, [records, compareYear, compareExam, compareQuarter, selectedJenjang, classesInSelectedJenjang, pctBasis, themeColors]);
+
+  // Yearly trend chart options with support for multiple visualization models
+  const yearlyTrendComparisonOptions = useMemo(() => {
+    const sortedYears = [...new Set(records.map(r => r.tahun))].sort();
+    
+    if (yearlyChartModel === 'stacked_bar') {
+      // Model 2: Stacked Bar Chart comparing composition of KKM status for the aggregate Jenjang across years
+      const tuntasData = sortedYears.map(yr => {
+        const yrRecs = records.filter(r => r.tahun === yr && r.ujian === compareExam && r.kuartal === compareQuarter && r.jenjang === selectedJenjang);
+        const total = yrRecs.length;
+        const count = yrRecs.filter(r => r.kkm === 'TUNTAS').length;
+        return total === 0 ? 0 : +((count / total) * 100).toFixed(1);
+      });
+
+      const tidakTuntasData = sortedYears.map(yr => {
+        const yrRecs = records.filter(r => r.tahun === yr && r.ujian === compareExam && r.kuartal === compareQuarter && r.jenjang === selectedJenjang);
+        const total = yrRecs.length;
+        const count = yrRecs.filter(r => r.kkm === 'TIDAK TUNTAS').length;
+        return total === 0 ? 0 : +((count / total) * 100).toFixed(1);
+      });
+
+      const tidakHadirData = sortedYears.map(yr => {
+        const yrRecs = records.filter(r => r.tahun === yr && r.ujian === compareExam && r.kuartal === compareQuarter && r.jenjang === selectedJenjang);
+        const total = yrRecs.length;
+        const count = yrRecs.filter(r => r.kkm === 'TIDAK HADIR' || r.kkm === 'TIDAK BACA').length;
+        return total === 0 ? 0 : +((count / total) * 100).toFixed(1);
+      });
+
+      return {
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { bottom: 5, data: ['Tuntas', 'Tidak Tuntas', 'Tidak Hadir/Baca'], textStyle: { color: themeColors.text } },
+        grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
+        xAxis: { type: 'category', data: sortedYears, axisLabel: { color: themeColors.text } },
+        yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: themeColors.textMuted }, splitLine: { lineStyle: { type: 'dashed', color: themeColors.border } } },
+        series: [
+          {
+            name: 'Tuntas',
+            type: 'bar',
+            stack: 'total',
+            itemStyle: { color: themeColors.primary },
+            label: { show: true, position: 'inside', formatter: '{c}%', color: '#fff', fontSize: 9 },
+            data: tuntasData
+          },
+          {
+            name: 'Tidak Tuntas',
+            type: 'bar',
+            stack: 'total',
+            itemStyle: { color: '#ef4444' },
+            label: { show: true, position: 'inside', formatter: '{c}%', color: '#fff', fontSize: 9 },
+            data: tidakTuntasData
+          },
+          {
+            name: 'Tidak Hadir/Baca',
+            type: 'bar',
+            stack: 'total',
+            itemStyle: { color: '#9ca3af' },
+            label: { show: true, position: 'inside', formatter: '{c}%', color: '#fff', fontSize: 9 },
+            data: tidakHadirData
+          }
+        ]
+      };
+    }
+    
+    if (yearlyChartModel === 'grouped_bar') {
+      // Model 3: Grouped Bar Chart comparing classes for each year
+      const seriesList = classesInSelectedJenjang.map((cls, idx) => {
+        const data = sortedYears.map(yr => {
+          const classRecs = records.filter(r => r.tahun === yr && r.ujian === compareExam && r.kuartal === compareQuarter && r.kelas === cls);
+          const total = classRecs.length;
+          const dinilai = classRecs.filter(r => r.kkm !== 'TIDAK HADIR' && r.kkm !== 'TIDAK BACA');
+          const tuntas = dinilai.filter(r => r.kkm === 'TUNTAS');
+          const denom = pctBasis === 'total' ? total : dinilai.length;
+          const tuntasPct = denom === 0 ? 0 : +(tuntas.length / denom * 100).toFixed(1);
+          return tuntasPct;
+        });
+
+        const colors = ['#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#10b981'];
+        const color = colors[idx % colors.length];
+
+        return {
+          name: `Kelas ${cls}`,
+          type: 'bar',
+          barGap: 0.1,
+          itemStyle: { color, borderRadius: [4, 4, 0, 0] },
+          label: { show: true, position: 'top', formatter: '{c}%', fontSize: 9, color: themeColors.text },
+          data
+        };
+      });
+
+      return {
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { bottom: 5, data: classesInSelectedJenjang.map(cls => `Kelas ${cls}`), textStyle: { color: themeColors.text } },
+        grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
+        xAxis: { type: 'category', data: sortedYears, axisLabel: { color: themeColors.text } },
+        yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: themeColors.textMuted }, splitLine: { lineStyle: { type: 'dashed', color: themeColors.border } } },
+        series: seriesList
+      };
+    }
+
+    // Model 1 (Default): Spline Line Chart comparing aggregate jenjang (glowing line) and individual classes
+    const seriesList = [];
+    
+    // 1. Aggregate Jenjang line
+    const jenjangData = sortedYears.map(yr => {
+      const yrRecs = records.filter(r => r.tahun === yr && r.ujian === compareExam && r.kuartal === compareQuarter && r.jenjang === selectedJenjang);
+      const total = yrRecs.length;
+      const dinilai = yrRecs.filter(r => r.kkm !== 'TIDAK HADIR' && r.kkm !== 'TIDAK BACA');
+      const tuntas = dinilai.filter(r => r.kkm === 'TUNTAS');
+      const denom = pctBasis === 'total' ? total : dinilai.length;
+      const tuntasPct = denom === 0 ? 0 : +(tuntas.length / denom * 100).toFixed(1);
+      return tuntasPct;
+    });
+    
+    seriesList.push({
+      name: `Rata-rata Jenjang ${selectedJenjang}`,
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 8,
+      lineStyle: { 
+        width: 4, 
+        color: themeColors.primary,
+        shadowColor: 'rgba(59, 130, 246, 0.25)',
+        shadowBlur: 8,
+        shadowOffsetY: 4
+      },
+      itemStyle: { color: themeColors.primary },
+      data: jenjangData,
+      label: { show: true, position: 'top', formatter: '{c}%', color: themeColors.text }
+    });
+
+    // 2. Individual Class lines
+    classesInSelectedJenjang.forEach((cls, idx) => {
+      const classData = sortedYears.map(yr => {
+        const clsRecs = records.filter(r => r.tahun === yr && r.ujian === compareExam && r.kuartal === compareQuarter && r.kelas === cls);
+        const total = clsRecs.length;
+        const dinilai = clsRecs.filter(r => r.kkm !== 'TIDAK HADIR' && r.kkm !== 'TIDAK BACA');
+        const tuntas = dinilai.filter(r => r.kkm === 'TUNTAS');
+        const denom = pctBasis === 'total' ? total : dinilai.length;
+        const tuntasPct = denom === 0 ? 0 : +(tuntas.length / denom * 100).toFixed(1);
+        return tuntasPct;
+      });
+      const colors = ['#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#10b981'];
+      const color = colors[idx % colors.length];
+      seriesList.push({
+        name: `Kelas ${cls}`,
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 5,
+        lineStyle: { width: 1.5, type: 'dashed', color },
+        itemStyle: { color },
+        data: classData
+      });
+    });
+
+    return {
+      tooltip: { trigger: 'axis' },
+      legend: { bottom: 5, data: [`Rata-rata Jenjang ${selectedJenjang}`, ...classesInSelectedJenjang.map(cls => `Kelas ${cls}`)], textStyle: { color: themeColors.text } },
+      grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
+      xAxis: { type: 'category', boundaryGap: false, data: sortedYears, axisLabel: { color: themeColors.text } },
+      yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: themeColors.textMuted }, splitLine: { lineStyle: { type: 'dashed', color: themeColors.border } } },
+      series: seriesList
+    };
+  }, [records, compareExam, compareQuarter, selectedJenjang, classesInSelectedJenjang, pctBasis, themeColors, yearlyChartModel]);
 
   // --- INFOGRAPHIC CATEGORY OPTIONS (Semua grafik menggunakan tipe Area Chart secara seragam) ---
   const categoryChartOptions = useMemo(() => {
-    if (currentRecords.length === 0) return null;
-
     const classesInJenjang = [...new Set(records.filter(r => r.jenjang === selectedJenjang).map(r => r.kelas))].sort();
 
     // 1. KESELURUHAN -> Area Chart
@@ -1294,7 +1646,7 @@ function App() {
   const comparisonData = useMemo(() => {
     const targetList = filterMode === 'kelas' ? kelasList : jenjangList;
     return targetList.map(item => {
-      const filtered = records.filter(r => (filterMode === 'kelas' ? r.kelas === item : r.jenjang === item));
+      const filtered = filteredByMetaRecords.filter(r => (filterMode === 'kelas' ? r.kelas === item : r.jenjang === item));
       const total = filtered.length;
       const dinilai = filtered.filter(r => r.kkm !== 'TIDAK HADIR' && r.kkm !== 'TIDAK BACA');
       const tuntas = dinilai.filter(r => r.kkm === 'TUNTAS');
@@ -1316,7 +1668,7 @@ function App() {
         tidakTuntasPct
       };
     });
-  }, [records, filterMode, kelasList, jenjangList, pctBasis]);
+  }, [filteredByMetaRecords, filterMode, kelasList, jenjangList, pctBasis]);
 
   // --- DETAILED STUDENTS TABLE FILTERS & PAGINATION ---
   const filteredStudents = useMemo(() => {
@@ -1441,13 +1793,7 @@ function App() {
                 {darkMode ? <Sun size={16} /> : <Moon size={16} />}
               </button>
 
-              {/* Avatar / Inisial */}
-              <div 
-                className="w-6 h-6 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-semibold text-[10px] select-none" 
-                title="Administrator MDTMU"
-              >
-                AD
-              </div>
+
 
             </div>
 
@@ -1575,58 +1921,172 @@ function App() {
         </div>
 
         {/* ROW 1: UPLOAD EXCEL SECTION */}
-        <section className="bg-bg-card border border-border-color rounded-lg p-5 flex flex-col md:flex-row gap-6 items-center transition-all duration-150 print:hidden">
+        <section className="bg-bg-card border border-border-color rounded-xl p-6 flex flex-col gap-5 transition-all duration-150 print:hidden">
           
-          <div className="flex-1">
-            <h2 className="text-base font-bold text-text-main flex items-center gap-2">
-              <Upload className="text-primary" size={20} />
-              <span>Unggah Data Nilai Ujian</span>
-            </h2>
-            <p className="text-xs text-text-muted mt-1 max-w-xl">
-              Unggah file Excel hasil penilaian ujian santri. Aplikasi akan mem-parsing otomatis seluruh kelas yang terdapat pada setiap tab sheet secara langsung.
-            </p>
-            <div className="flex items-center gap-3 mt-4 flex-wrap">
-              <button
-                className="px-4.5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-xs font-semibold transition-all duration-150 flex items-center gap-2 cursor-pointer"
-                onClick={downloadSampleExcel}
-              >
-                <Download size={14} />
-                <span>Unduh Template Excel</span>
-              </button>
-              {fileName && (
-                <div className="px-3.5 py-2 bg-primary/10 text-primary border border-primary/20 rounded-md text-xs font-medium flex items-center gap-1.5 animate-pulse">
-                  <CheckCircle size={14} />
-                  <span>Aktif: {fileName}</span>
-                </div>
-              )}
+          <div className="flex flex-col lg:flex-row gap-6 items-center w-full justify-between">
+            {/* Left Column: Info & Actions */}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-bold text-text-main flex items-center gap-2">
+                <Upload className="text-primary" size={20} />
+                <span>Unggah Data Nilai Ujian</span>
+              </h2>
+              <p className="text-xs text-text-muted mt-1.5 max-w-xl leading-relaxed">
+                Silakan unggah berkas Excel hasil penilaian ujian santri. Anda dapat mengunggah beberapa berkas sekaligus (MID, MTSD, Kuartal K1, K2, K3, dll.) untuk membandingkan data lintas ujian, kuartal, maupun tahun ajaran.
+              </p>
+              <div className="flex items-center gap-3 mt-4">
+                <button
+                  className="px-4.5 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg text-xs font-semibold transition-all duration-150 flex items-center gap-2 cursor-pointer shadow-xs"
+                  onClick={downloadSampleExcel}
+                >
+                  <Download size={14} />
+                  <span>Unduh Template Excel</span>
+                </button>
+                {fileName && (
+                  <div className="px-3.5 py-2 bg-primary/10 text-primary border border-primary/20 rounded-md text-xs font-medium flex items-center gap-1.5 animate-pulse max-w-[200px] truncate" title={fileName}>
+                    <CheckCircle size={14} />
+                    <span className="truncate">{fileName}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Column: Drag & Drop Box */}
+            <div 
+              className={`w-full lg:w-96 h-28 border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-4 transition-all duration-150 text-center cursor-pointer ${
+                dragActive 
+                  ? 'border-primary bg-primary/10' 
+                  : 'border-border-color hover:border-primary bg-bg-app'
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept=".xlsx, .xls"
+                onChange={(e) => e.target.files?.[0] && parseExcelFile(e.target.files[0])}
+              />
+              <FileSpreadsheet className="text-primary/70 mb-2" size={28} />
+              <span className="text-xs font-semibold text-text-main">Tarik berkas atau klik di sini</span>
+              <span className="text-[10px] text-text-muted mt-1">Hanya mendukung format file .xlsx / .xls</span>
             </div>
           </div>
 
-          <div 
-            className={`w-full md:w-80 h-28 border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-4 transition-all duration-150 text-center cursor-pointer ${
-              dragActive 
-                ? 'border-primary bg-primary/10' 
-                : 'border-border-color hover:border-primary bg-bg-app'
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept=".xlsx, .xls"
-              onChange={(e) => e.target.files?.[0] && parseExcelFile(e.target.files[0])}
-            />
-            <FileSpreadsheet className="text-text-muted mb-2" size={28} />
-            <span className="text-xs font-semibold text-text-main">Tarik berkas atau klik di sini</span>
-            <span className="text-[10px] text-text-muted mt-1">Hanya mendukung format file .xlsx / .xls</span>
-          </div>
+          {/* DAFTAR BERKAS AKTIF */}
+          {datasets.length > 0 && (
+            <div className="w-full border-t border-border-color pt-5 mt-1">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[11px] font-bold text-text-main uppercase tracking-wider flex items-center gap-2">
+                  <span>Berkas Aktif yang Dimuat</span>
+                  <span className="px-2 py-0.5 bg-primary/15 text-primary rounded-full text-[9px] font-extrabold">{datasets.length}</span>
+                </h3>
+                <button 
+                  onClick={handleResetData}
+                  className="text-xs text-text-muted hover:text-brand-danger font-medium transition-colors cursor-pointer"
+                >
+                  Reset Semua
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2.5">
+                {datasets.map(d => (
+                  <div 
+                    key={d.id} 
+                    className="flex items-center justify-between p-2.5 bg-bg-app border border-border-color rounded-xl hover:border-primary/40 hover:shadow-xs transition-all gap-1.5"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <FileSpreadsheet className="text-primary shrink-0" size={14} />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-text-main text-[10px] truncate" title={d.name}>
+                          {d.name}
+                        </span>
+                        <span className="text-[8px] text-text-muted truncate">
+                          TA {d.year} · {d.examType} · {d.quarter} ({d.recordCount} Santri)
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteDataset(d.id)}
+                      className="p-1 rounded-full text-brand-danger hover:bg-brand-danger/10 hover:text-brand-danger transition-colors cursor-pointer shrink-0"
+                      title="Hapus Berkas Ini"
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
         </section>
+
+        {/* DIALOG KONFIRMASI METADATA BERKAS */}
+        {pendingDataset && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-bg-card border border-border-color rounded-xl p-6 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-200 text-text-main">
+              <h3 className="text-sm font-bold text-text-main flex items-center gap-2 mb-3">
+                <FileSpreadsheet className="text-primary" size={18} />
+                <span>Konfirmasi Identitas Berkas</span>
+              </h3>
+              <p className="text-xs text-text-muted mb-4 leading-relaxed">
+                Sistem mendeteksi informasi berikut dari nama berkas <strong>{pendingDataset.fileName}</strong>. Silakan ubah jika ada ketidaksesuaian.
+              </p>
+              
+              <div className="flex flex-col gap-4 mb-6">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-text-muted uppercase">Tahun Ajaran</label>
+                  <input
+                    type="text"
+                    value={pendingDataset.year}
+                    onChange={(e) => setPendingDataset(prev => ({ ...prev, year: e.target.value }))}
+                    className="px-3 py-2 bg-bg-app border border-border-color rounded-md text-xs outline-none focus:border-primary text-text-main"
+                    placeholder="Contoh: 46-47 H"
+                  />
+                </div>
+                
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-text-muted uppercase">Jenis Ujian</label>
+                  <input
+                    type="text"
+                    value={pendingDataset.exam}
+                    onChange={(e) => setPendingDataset(prev => ({ ...prev, exam: e.target.value }))}
+                    className="px-3 py-2 bg-bg-app border border-border-color rounded-md text-xs outline-none focus:border-primary text-text-main"
+                    placeholder="Contoh: MID atau MTSD"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-text-muted uppercase">Kuartal / Gelombang (K)</label>
+                  <input
+                    type="text"
+                    value={pendingDataset.quarter}
+                    onChange={(e) => setPendingDataset(prev => ({ ...prev, quarter: e.target.value }))}
+                    className="px-3 py-2 bg-bg-app border border-border-color rounded-md text-xs outline-none focus:border-primary text-text-main"
+                    placeholder="Contoh: K1, K2, K3"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-end gap-2 text-xs font-semibold">
+                <button
+                  onClick={() => setPendingDataset(null)}
+                  className="px-4 py-2 border border-border-color rounded-lg text-text-muted hover:bg-bg-app transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={() => handleConfirmDataset(pendingDataset.year, pendingDataset.exam, pendingDataset.quarter)}
+                  className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors cursor-pointer"
+                >
+                  Setuju & Impor
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ROW 2: FILTERS & CONTROL PANEL */}
         <section className="bg-bg-card border border-border-color rounded-lg p-5 flex flex-col gap-5 transition-all duration-150 print:hidden">
@@ -1636,9 +2096,9 @@ function App() {
             {/* Filter Mode Selector */}
             <div className="flex flex-col gap-2">
               <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Mode Analisis</span>
-              <div className="inline-flex p-1 bg-bg-app rounded-lg gap-1 w-fit border border-border-color">
+              <div className="flex flex-wrap p-1 bg-bg-app rounded-lg gap-1 border border-border-color">
                 <button
-                  className={`px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                     filterMode === 'kelas'
                       ? 'bg-bg-card text-primary shadow-sm'
                       : 'text-text-muted hover:text-text-main'
@@ -1648,7 +2108,7 @@ function App() {
                   Per Kelas
                 </button>
                 <button
-                  className={`px-4 py-2 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                     filterMode === 'jenjang'
                       ? 'bg-bg-card text-primary shadow-sm'
                       : 'text-text-muted hover:text-text-main'
@@ -1657,30 +2117,209 @@ function App() {
                 >
                   Per Jenjang (Agregasi)
                 </button>
+                <button
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                    filterMode === 'perbandingan_kuartal'
+                      ? 'bg-bg-card text-primary shadow-sm'
+                      : 'text-text-muted hover:text-text-main'
+                  }`}
+                  onClick={() => setFilterMode('perbandingan_kuartal')}
+                >
+                  Perbandingan Kuartal
+                </button>
+                <button
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                    filterMode === 'perbandingan_ujian'
+                      ? 'bg-bg-card text-primary shadow-sm'
+                      : 'text-text-muted hover:text-text-main'
+                  }`}
+                  onClick={() => setFilterMode('perbandingan_ujian')}
+                >
+                  Perbandingan Ujian
+                </button>
+                <button
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                    filterMode === 'perbandingan_tahun'
+                      ? 'bg-bg-card text-primary shadow-sm'
+                      : 'text-text-muted hover:text-text-main'
+                  }`}
+                  onClick={() => setFilterMode('perbandingan_tahun')}
+                >
+                  Perbandingan Tahun
+                </button>
               </div>
             </div>
 
             {/* Dropdown Selector */}
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Pilih Kategori</span>
-              <div className="flex items-center gap-2">
-                <Filter className="text-text-muted" size={16} />
-                {filterMode === 'kelas' ? (
-                  <CustomSelect
-                    value={selectedKelas}
-                    onChange={setSelectedKelas}
-                    options={kelasList.map(k => ({ label: `Kelas ${k}`, value: k }))}
-                    ariaLabel="Pilih Kategori Kelas"
-                  />
-                ) : (
-                  <CustomSelect
-                    value={selectedJenjang}
-                    onChange={setSelectedJenjang}
-                    options={jenjangList.map(j => ({ label: `Jenjang ${j}`, value: j }))}
-                    ariaLabel="Pilih Kategori Jenjang"
-                  />
-                )}
-              </div>
+            <div className="flex flex-wrap items-center gap-4 flex-1">
+              {/* Scope/Category Selectors */}
+              {(filterMode === 'kelas' || filterMode === 'jenjang') && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Pilih Kategori</span>
+                  <div className="flex items-center gap-2">
+                    <Filter className="text-text-muted" size={16} />
+                    {filterMode === 'kelas' ? (
+                      <CustomSelect
+                        value={selectedKelas}
+                        onChange={setSelectedKelas}
+                        options={kelasList.map(k => ({ label: `Kelas ${k}`, value: k }))}
+                        ariaLabel="Pilih Kategori Kelas"
+                        className="w-36"
+                      />
+                    ) : (
+                      <CustomSelect
+                        value={selectedJenjang}
+                        onChange={setSelectedJenjang}
+                        options={jenjangList.map(j => ({ label: `Jenjang ${j}`, value: j }))}
+                        ariaLabel="Pilih Kategori Jenjang"
+                        className="w-36"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Data Filters for Single-View (Kelas/Jenjang) */}
+              {(filterMode === 'kelas' || filterMode === 'jenjang') && datasets.length > 0 && (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Tahun Ajaran</span>
+                    <CustomSelect
+                      value={activeYear}
+                      onChange={setActiveYear}
+                      options={availableYears.map(y => ({ label: y, value: y }))}
+                      ariaLabel="Pilih Tahun Ajaran"
+                      className="w-32"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Jenis Ujian</span>
+                    <CustomSelect
+                      value={activeExam}
+                      onChange={setActiveExam}
+                      options={availableExams.map(e => ({ label: e, value: e }))}
+                      ariaLabel="Pilih Jenis Ujian"
+                      className="w-32"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Kuartal</span>
+                    <CustomSelect
+                      value={activeQuarter}
+                      onChange={setActiveQuarter}
+                      options={availableQuarters.map(q => ({ label: `Kuartal ${q}`, value: q }))}
+                      ariaLabel="Pilih Kuartal"
+                      className="w-32"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Comparison selectors */}
+              {filterMode === 'perbandingan_kuartal' && (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Tahun Ajaran</span>
+                    <CustomSelect
+                      value={compareYear}
+                      onChange={setCompareYear}
+                      options={availableYears.map(y => ({ label: y, value: y }))}
+                      ariaLabel="Pilih Tahun Ajaran Perbandingan"
+                      className="w-32"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Jenis Ujian</span>
+                    <CustomSelect
+                      value={compareExam}
+                      onChange={setCompareExam}
+                      options={availableExams.map(e => ({ label: e, value: e }))}
+                      ariaLabel="Pilih Jenis Ujian Perbandingan"
+                      className="w-32"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Pilih Jenjang</span>
+                    <CustomSelect
+                      value={selectedJenjang}
+                      onChange={setSelectedJenjang}
+                      options={jenjangList.map(j => ({ label: `Jenjang ${j}`, value: j }))}
+                      ariaLabel="Pilih Jenjang Perbandingan"
+                      className="w-32"
+                    />
+                  </div>
+                </>
+              )}
+
+              {filterMode === 'perbandingan_ujian' && (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Tahun Ajaran</span>
+                    <CustomSelect
+                      value={compareYear}
+                      onChange={setCompareYear}
+                      options={availableYears.map(y => ({ label: y, value: y }))}
+                      ariaLabel="Pilih Tahun Ajaran Perbandingan"
+                      className="w-32"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Kuartal</span>
+                    <CustomSelect
+                      value={compareQuarter}
+                      onChange={setCompareQuarter}
+                      options={availableQuarters.map(q => ({ label: `Kuartal ${q}`, value: q }))}
+                      ariaLabel="Pilih Kuartal Perbandingan"
+                      className="w-32"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Pilih Jenjang</span>
+                    <CustomSelect
+                      value={selectedJenjang}
+                      onChange={setSelectedJenjang}
+                      options={jenjangList.map(j => ({ label: `Jenjang ${j}`, value: j }))}
+                      ariaLabel="Pilih Jenjang Perbandingan"
+                      className="w-32"
+                    />
+                  </div>
+                </>
+              )}
+
+              {filterMode === 'perbandingan_tahun' && (
+                <>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Jenis Ujian</span>
+                    <CustomSelect
+                      value={compareExam}
+                      onChange={setCompareExam}
+                      options={availableExams.map(e => ({ label: e, value: e }))}
+                      ariaLabel="Pilih Jenis Ujian Perbandingan"
+                      className="w-32"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Kuartal</span>
+                    <CustomSelect
+                      value={compareQuarter}
+                      onChange={setCompareQuarter}
+                      options={availableQuarters.map(q => ({ label: `Kuartal ${q}`, value: q }))}
+                      ariaLabel="Pilih Kuartal Perbandingan"
+                      className="w-32"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">Pilih Jenjang</span>
+                    <CustomSelect
+                      value={selectedJenjang}
+                      onChange={setSelectedJenjang}
+                      options={jenjangList.map(j => ({ label: `Jenjang ${j}`, value: j }))}
+                      ariaLabel="Pilih Jenjang Perbandingan"
+                      className="w-32"
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Percentage Basis Toggle */}
@@ -1743,14 +2382,104 @@ function App() {
               </div>
               <div className="text-right text-[10px] text-text-muted">
                 <p className="font-semibold text-text-main">
-                  {filterMode === 'kelas' ? `Kelas: ${selectedKelas}` : `Jenjang: ${selectedJenjang}`}
+                  {filterMode === 'kelas' && `Kelas: ${selectedKelas}`}
+                  {filterMode === 'jenjang' && `Jenjang: ${selectedJenjang}`}
+                  {filterMode === 'perbandingan_kuartal' && `Perbandingan Kuartal — Jenjang ${selectedJenjang}`}
+                  {filterMode === 'perbandingan_ujian' && `Perbandingan Ujian — Jenjang ${selectedJenjang}`}
+                  {filterMode === 'perbandingan_tahun' && `Perbandingan Tahun — Jenjang ${selectedJenjang}`}
                 </p>
                 <p>Tanggal: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
               </div>
             </div>
           )}
 
-          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 print:grid-cols-5 gap-5">
+          {/* COMPARISON CHARTS VIEW */}
+          {(filterMode === 'perbandingan_kuartal' || filterMode === 'perbandingan_ujian' || filterMode === 'perbandingan_tahun') ? (
+            <div className="bg-bg-card border border-border-color rounded-lg p-5 flex flex-col gap-4 w-full transition-all duration-150">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-text-main">
+                    {filterMode === 'perbandingan_kuartal' && `Perbandingan Kelulusan Antar Kuartal — Jenjang ${selectedJenjang} (${compareYear} · ${compareExam})`}
+                    {filterMode === 'perbandingan_ujian' && `Perbandingan Kelulusan Antar Jenis Ujian — Jenjang ${selectedJenjang} (${compareYear} · Kuartal ${compareQuarter})`}
+                    {filterMode === 'perbandingan_tahun' && `Tren Kelulusan Tahunan — Jenjang ${selectedJenjang} (Ujian ${compareExam} · Kuartal ${compareQuarter})`}
+                  </h3>
+                  <p className="text-[11px] text-text-muted mt-0.5">
+                    {filterMode === 'perbandingan_kuartal' && 'Grafik perbandingan tingkat kelulusan santri per kelas lintas Kuartal (K1, K2, K3, dst.)'}
+                    {filterMode === 'perbandingan_ujian' && 'Grafik perbandingan tingkat kelulusan santri per kelas lintas Jenis Ujian (MID vs MTSD)'}
+                    {filterMode === 'perbandingan_tahun' && (
+                      yearlyChartModel === 'line' ? 'Garis tren kelulusan akademik jenjang dan masing-masing kelas dari tahun ke tahun' :
+                      yearlyChartModel === 'stacked_bar' ? 'Komposisi persentase kelulusan (predikat KKM) agregat jenjang dari tahun ke tahun' :
+                      'Grafik batang perbandingan tingkat kelulusan tiap kelas dikelompokkan berdasarkan tahun ajaran'
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {filterMode === 'perbandingan_tahun' && (
+                    <div className="flex p-0.5 bg-bg-app rounded-md gap-0.5 border border-border-color text-[10px] font-bold print:hidden">
+                      <button
+                        className={`px-2 py-1.5 rounded cursor-pointer transition-all ${
+                          yearlyChartModel === 'line' 
+                            ? 'bg-bg-card text-primary shadow-xs' 
+                            : 'text-text-muted hover:text-text-main'
+                        }`}
+                        onClick={() => setYearlyChartModel('line')}
+                      >
+                        Garis Tren
+                      </button>
+                      <button
+                        className={`px-2 py-1.5 rounded cursor-pointer transition-all ${
+                          yearlyChartModel === 'stacked_bar' 
+                            ? 'bg-bg-card text-primary shadow-xs' 
+                            : 'text-text-muted hover:text-text-main'
+                        }`}
+                        onClick={() => setYearlyChartModel('stacked_bar')}
+                      >
+                        Komposisi KKM
+                      </button>
+                      <button
+                        className={`px-2 py-1.5 rounded cursor-pointer transition-all ${
+                          yearlyChartModel === 'grouped_bar' 
+                            ? 'bg-bg-card text-primary shadow-xs' 
+                            : 'text-text-muted hover:text-text-main'
+                        }`}
+                        onClick={() => setYearlyChartModel('grouped_bar')}
+                      >
+                        Grup Kelas
+                      </button>
+                    </div>
+                  )}
+                  <ChartExportMenu 
+                    chartRef={
+                      filterMode === 'perbandingan_kuartal' ? quarterComparisonChartRef :
+                      filterMode === 'perbandingan_ujian' ? examComparisonChartRef : yearlyTrendChartRef
+                    } 
+                    filename={`perbandingan-${filterMode}-${selectedJenjang}`} 
+                  />
+                </div>
+              </div>
+              <div className="h-96 relative">
+                {records.length === 0 ? (
+                  <div className="absolute inset-0 flex items-center justify-center text-xs text-text-muted">Tidak ada data. Silakan unggah berkas Excel terlebih dahulu.</div>
+                ) : (
+                  <ReactECharts 
+                    ref={
+                      filterMode === 'perbandingan_kuartal' ? quarterComparisonChartRef :
+                      filterMode === 'perbandingan_ujian' ? examComparisonChartRef : yearlyTrendChartRef
+                    } 
+                    option={
+                      filterMode === 'perbandingan_kuartal' ? quarterComparisonOptions :
+                      filterMode === 'perbandingan_ujian' ? examComparisonOptions : yearlyTrendComparisonOptions
+                    } 
+                    opts={{ renderer: 'svg' }} 
+                    style={{ height: '100%', width: '100%' }} 
+                    notMerge={true} 
+                  />
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 print:grid-cols-5 gap-5">
           
           {/* Card 1: Keseluruhan */}
           <div className="bg-bg-card border border-border-color rounded-lg p-5 relative overflow-hidden group flex flex-col justify-between">
@@ -2112,11 +2841,147 @@ function App() {
             </div>
           </div>
         </section>
+            </>
+          )}
       </div>
       {/* ROW 5: TABLES SECTION (Rekap Kelas + Detail Siswa) */}
       <section className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${printMode === 'charts' ? 'print:hidden' : ''}`}>
           
-          {/* Left Column: Tabel Rekapitulasi Ringkas Kelas/Jenjang */}
+          {(filterMode === 'perbandingan_kuartal' || filterMode === 'perbandingan_ujian' || filterMode === 'perbandingan_tahun') ? (
+            <div className="bg-bg-card border border-border-color rounded-lg p-5 flex flex-col gap-4 lg:col-span-3 w-full transition-all duration-150">
+              <div>
+                <h3 className="text-sm font-bold text-text-main">
+                  Tabel Rincian Perbandingan Kelulusan (%)
+                </h3>
+                <p className="text-[11px] text-text-muted mt-0.5">Persentase Kelulusan (Tuntas) berdasarkan filter yang aktif</p>
+              </div>
+
+              <div className="overflow-x-auto border border-border-color rounded-md">
+                {filterMode === 'perbandingan_kuartal' && (() => {
+                  const activeQuarters = [...new Set(records.filter(r => r.tahun === compareYear && r.ujian === compareExam).map(r => r.kuartal))].sort();
+                  return (
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-bg-app border-b border-border-color text-text-muted font-semibold">
+                          <th className="p-3">Kelas</th>
+                          {activeQuarters.map(q => (
+                            <th key={q} className="p-3 text-center">Kuartal {q}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-color text-text-main">
+                        {classesInSelectedJenjang.map(cls => (
+                          <tr key={cls} className="hover:bg-primary/5 transition-all">
+                            <td className="p-3 font-semibold">Kelas {cls}</td>
+                            {activeQuarters.map(q => {
+                              const classRecs = records.filter(r => r.tahun === compareYear && r.ujian === compareExam && r.kuartal === q && r.kelas === cls);
+                              const total = classRecs.length;
+                              const dinilai = classRecs.filter(r => r.kkm !== 'TIDAK HADIR' && r.kkm !== 'TIDAK BACA');
+                              const tuntas = dinilai.filter(r => r.kkm === 'TUNTAS');
+                              const denom = pctBasis === 'total' ? total : dinilai.length;
+                              const tuntasPct = denom === 0 ? 0 : +(tuntas.length / denom * 100).toFixed(1);
+                              return (
+                                <td key={q} className="p-3 text-center">{total > 0 ? `${tuntasPct}%` : '-'}</td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()}
+
+                {filterMode === 'perbandingan_ujian' && (() => {
+                  return (
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-bg-app border-b border-border-color text-text-muted font-semibold">
+                          <th className="p-3">Kelas</th>
+                          <th className="p-3 text-center">Ujian Tengah Semester (MID)</th>
+                          <th className="p-3 text-center">Ujian Akhir (MTSD)</th>
+                          <th className="p-3 text-right">Selisih</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-color text-text-main">
+                        {classesInSelectedJenjang.map(cls => {
+                          const getPctForExam = (exam) => {
+                            const classRecs = records.filter(r => r.tahun === compareYear && r.ujian === exam && r.kuartal === compareQuarter && r.kelas === cls);
+                            const total = classRecs.length;
+                            const dinilai = classRecs.filter(r => r.kkm !== 'TIDAK HADIR' && r.kkm !== 'TIDAK BACA');
+                            const tuntas = dinilai.filter(r => r.kkm === 'TUNTAS');
+                            const denom = pctBasis === 'total' ? total : dinilai.length;
+                            return denom === 0 ? 0 : +(tuntas.length / denom * 100).toFixed(1);
+                          };
+                          const midPct = getPctForExam('MID');
+                          const mtsdPct = getPctForExam('MTSD');
+                          const diff = +(mtsdPct - midPct).toFixed(1);
+                          return (
+                            <tr key={cls} className="hover:bg-primary/5 transition-all">
+                              <td className="p-3 font-semibold">Kelas {cls}</td>
+                              <td className="p-3 text-center">{midPct}%</td>
+                              <td className="p-3 text-center">{mtsdPct}%</td>
+                              <td className={`p-3 text-right font-bold ${diff >= 0 ? 'text-primary' : 'text-brand-danger'}`}>
+                                {diff >= 0 ? `+${diff}%` : `${diff}%`}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  );
+                })()}
+
+                {filterMode === 'perbandingan_tahun' && (() => {
+                  const sortedYears = [...new Set(records.map(r => r.tahun))].sort();
+                  return (
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-bg-app border-b border-border-color text-text-muted font-semibold">
+                          <th className="p-3">Tahun Ajaran</th>
+                          <th className="p-3 text-center font-bold">Rata-rata Jenjang {selectedJenjang}</th>
+                          {classesInSelectedJenjang.map(cls => (
+                            <th key={cls} className="p-3 text-center">Kelas {cls}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-color text-text-main">
+                        {sortedYears.map(yr => {
+                          const getJenjangPct = () => {
+                            const yrRecs = records.filter(r => r.tahun === yr && r.ujian === compareExam && r.kuartal === compareQuarter && r.jenjang === selectedJenjang);
+                            const total = yrRecs.length;
+                            const dinilai = yrRecs.filter(r => r.kkm !== 'TIDAK HADIR' && r.kkm !== 'TIDAK BACA');
+                            const tuntas = dinilai.filter(r => r.kkm === 'TUNTAS');
+                            const denom = pctBasis === 'total' ? total : dinilai.length;
+                            return denom === 0 ? 0 : +(tuntas.length / denom * 100).toFixed(1);
+                          };
+                          const jenjangPct = getJenjangPct();
+                          return (
+                            <tr key={yr} className="hover:bg-primary/5 transition-all">
+                              <td className="p-3 font-semibold">{yr}</td>
+                              <td className="p-3 text-center font-bold text-primary">{jenjangPct}%</td>
+                              {classesInSelectedJenjang.map(cls => {
+                                const classRecs = records.filter(r => r.tahun === yr && r.ujian === compareExam && r.kuartal === compareQuarter && r.kelas === cls);
+                                const total = classRecs.length;
+                                const dinilai = classRecs.filter(r => r.kkm !== 'TIDAK HADIR' && r.kkm !== 'TIDAK BACA');
+                                const tuntas = dinilai.filter(r => r.kkm === 'TUNTAS');
+                                const denom = pctBasis === 'total' ? total : dinilai.length;
+                                const tuntasPct = denom === 0 ? 0 : +(tuntas.length / denom * 100).toFixed(1);
+                                return (
+                                  <td key={cls} className="p-3 text-center">{total > 0 ? `${tuntasPct}%` : '-'}</td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  );
+                })()}
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Left Column: Tabel Rekapitulasi Ringkas Kelas/Jenjang */}
           <div className={`bg-bg-card border border-border-color rounded-lg p-5 flex flex-col gap-4 transition-all duration-150 ${printMode === 'data' ? 'print:hidden' : ''}`}>
             <div>
               <h3 className="text-sm font-bold text-text-main">
@@ -2125,14 +2990,14 @@ function App() {
               <p className="text-[11px] text-text-muted mt-0.5">Perbandingan performa data secara ringkas</p>
             </div>
 
-            <div className="overflow-x-auto border border-border-color rounded-md">
+            <div className="overflow-auto max-h-[380px] border border-border-color rounded-md">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-bg-app border-b border-border-color text-text-muted font-semibold">
-                    <th className="p-3">{filterMode === 'kelas' ? 'Kelas' : 'Jenjang'}</th>
-                    <th className="p-3 text-center">Total</th>
-                    <th className="p-3 text-center">Tuntas</th>
-                    <th className="p-3 text-right">% Tuntas</th>
+                  <tr className="bg-bg-app border-b border-border-color text-text-muted font-semibold sticky top-0 z-10 shadow-xs">
+                    <th className="p-3 bg-bg-app">{filterMode === 'kelas' ? 'Kelas' : 'Jenjang'}</th>
+                    <th className="p-3 text-center bg-bg-app">Total</th>
+                    <th className="p-3 text-center bg-bg-app">Tuntas</th>
+                    <th className="p-3 text-right bg-bg-app">% Tuntas</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-color text-text-main">
@@ -2276,6 +3141,8 @@ function App() {
             )}
 
           </div>
+            </>
+          )}
 
         </section>
 
