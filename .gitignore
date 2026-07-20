@@ -25,6 +25,7 @@ dist-ssr
 
 # Data & Temp files
 *.xlsx
+!public/TEMPLATE.xlsx
 *.zip
 ~$*.xlsx
 

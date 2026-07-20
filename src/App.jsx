@@ -765,55 +765,17 @@ function App() {
   };
 
   // --- DOWNLOAD SAMPLE EXCEL ---
-  const downloadSampleExcel = () => {
+  const downloadSampleExcel = async () => {
     try {
-      const wb = XLSX.utils.book_new();
-      
-      const wsData = [
-        ['PENILAIAN UJIAN BACA KITAB'],
-        ['MADRASAH DINIYAH TAKMILIYAH MIFTAHUL ULUM'],
-        ['Banyuputih Kidul Jatiroto Lumajang'],
-        ['ASUHAN : UST. FIRRUL AZIZ', '', '', '', '', '', '', '', 'KELAS: I A'],
-        [],
-        ['NO', 'NOPES', 'NAMA', 'ASR', 'ASPEK PENILAIAN', '', '', 'JML', 'RT', 'RANK', 'KKM', 'KET'],
-        ['', '', '', '', "Sihhah Al-Qiro'ah", 'Makna Mufrodat', 'Makna Murad', '', '', '', '', ''],
-        ['', '', '', '', 'MAX 30', 'MAX 30', 'MAX 5', '', '', '', '60', ''],
-        [1, '07001', 'M Khoironi Hasan', 'A 01', 26, 25, 3, 222, 74.0, 1, 'TUNTAS', ''],
-        [2, '07002', 'Achmad Naufal', 'A 06', 11, 11, 11, 33, 11.0, 2, 'TIDAK HADIR', 'BOYONG'],
-        [3, '07003', 'Rama Afriyanto', 'A 10', 17, 15, 6, 114, 38.0, 3, 'TIDAK TUNTAS', 'TM']
-      ];
-
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-      ws['!merges'] = [
-        { s: { r: 5, c: 4 }, e: { r: 5, c: 6 } }, // ASPEK PENILAIAN
-        { s: { r: 5, c: 0 }, e: { r: 7, c: 0 } }, // NO
-        { s: { r: 5, c: 1 }, e: { r: 7, c: 1 } }, // NOPES
-        { s: { r: 5, c: 2 }, e: { r: 7, c: 2 } }, // NAMA
-        { s: { r: 5, c: 3 }, e: { r: 7, c: 3 } }, // ASR
-        { s: { r: 5, c: 7 }, e: { r: 7, c: 7 } }, // JML
-        { s: { r: 5, c: 8 }, e: { r: 7, c: 8 } }, // RT
-        { s: { r: 5, c: 9 }, e: { r: 7, c: 9 } }, // RANK
-        { s: { r: 5, c: 10 }, e: { r: 6, c: 10 } }, // KKM
-        { s: { r: 5, c: 11 }, e: { r: 7, c: 11 } }  // KET
-      ];
-
-      XLSX.utils.book_append_sheet(wb, ws, 'I A');
-
-      // Generate binary string for download
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
-      const s2ab = (s) => {
-        const buf = new ArrayBuffer(s.length);
-        const view = new Uint8Array(buf);
-        for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
-        return buf;
-      };
-      
-      const fileBlob = new Blob([s2ab(wbout)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      if (fileBlob.size === 0) {
-        throw new Error("File Excel yang dihasilkan kosong (0 byte).");
+      const response = await fetch('/TEMPLATE.xlsx');
+      if (!response.ok) {
+        throw new Error(`Gagal mengambil berkas template dari server (status: ${response.status})`);
       }
-      saveAs(fileBlob, 'template-penilaian-ujian-baca-kitab.xlsx');
+      const fileBlob = await response.blob();
+      if (fileBlob.size === 0) {
+        throw new Error("Berkas template kosong (0 byte).");
+      }
+      saveAs(fileBlob, 'TEMPLATE.xlsx');
     } catch (error) {
       console.error(error);
       alert(`Gagal mengunduh template Excel: ${error.message}`);
