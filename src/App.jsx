@@ -286,7 +286,6 @@ const ChartExportMenu = ({ chartRef, filename }) => {
 // --- CURSOR FOLLOWING DOT COMPONENT (Adaptive Dark/Light Theme) ---
 const CursorFollower = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [trailPosition, setTrailPosition] = useState({ x: 0, y: 0 });
   const [visible, setVisible] = useState(false);
   const [isHoveringClickable, setIsHoveringClickable] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(true);
@@ -338,53 +337,18 @@ const CursorFollower = () => {
     };
   }, [isTouchDevice]);
 
-  // Efek lerp (linear interpolation) untuk gerakan trailing yang elastis dan mulus
-  useEffect(() => {
-    if (isTouchDevice || !visible) return;
-
-    let animationFrameId;
-    const updateTrail = () => {
-      setTrailPosition(prev => {
-        const dx = position.x - prev.x;
-        const dy = position.y - prev.y;
-        return {
-          x: prev.x + dx * 0.16, // Nilai lerp 0.16 memberikan efek tarikan (inertia) yang pas
-          y: prev.y + dy * 0.16
-        };
-      });
-      animationFrameId = requestAnimationFrame(updateTrail);
-    };
-
-    animationFrameId = requestAnimationFrame(updateTrail);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [position, isTouchDevice, visible]);
-
   if (isTouchDevice || !visible) return null;
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[9999] no-print print:hidden">
-      {/* Dot kecil dalam: mengikuti ujung kursor secara instan */}
+      {/* Dot kursor: mengikuti ujung kursor secara instan dengan ukuran yang pas */}
       <div 
-        className="fixed -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full transition-transform duration-100 ease-out"
+        className="fixed -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full transition-transform duration-100 ease-out shadow-sm"
         style={{ 
           left: `${position.x}px`, 
           top: `${position.y}px`,
           backgroundColor: 'var(--primary)',
-          transform: `translate(-50%, -50%) scale(${isHoveringClickable ? 1.5 : 1})`
-        }}
-      />
-      {/* Ring luar: membuntuti dengan kelembaman elastis */}
-      <div 
-        className="fixed -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all duration-75 ease-out"
-        style={{ 
-          left: `${trailPosition.x}px`, 
-          top: `${trailPosition.y}px`,
-          width: isHoveringClickable ? '44px' : '28px',
-          height: isHoveringClickable ? '44px' : '28px',
-          borderColor: 'var(--primary)',
-          backgroundColor: 'var(--primary)',
-          opacity: isHoveringClickable ? 0.18 : 0.08,
-          transform: 'translate(-50%, -50%)'
+          transform: `translate(-50%, -50%) scale(${isHoveringClickable ? 1.4 : 1})`
         }}
       />
     </div>
