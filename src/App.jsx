@@ -283,6 +283,114 @@ const ChartExportMenu = ({ chartRef, filename }) => {
   );
 };
 
+// --- CURSOR FOLLOWING DOT COMPONENT (Adaptive Dark/Light Theme) ---
+const CursorFollower = () => {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [trailPosition, setTrailPosition] = useState({ x: 0, y: 0 });
+  const [visible, setVisible] = useState(false);
+  const [isHoveringClickable, setIsHoveringClickable] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(true);
+
+  useEffect(() => {
+    // Deteksi apakah perangkat menggunakan layar sentuh agar tidak mengganggu di HP/Tablet
+    const checkTouch = () => {
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      setIsTouchDevice(hasTouch);
+    };
+    checkTouch();
+
+    if (isTouchDevice) return;
+
+    const handleMouseMove = (e) => {
+      setPosition({ x: e.clientX, y: e.clientY });
+      setVisible(true);
+    };
+
+    const handleMouseLeave = () => setVisible(false);
+    const handleMouseEnter = () => setVisible(true);
+
+    const handleMouseOver = (e) => {
+      const target = e.target;
+      if (!target) return;
+      
+      const isClickable = 
+        target.tagName === 'BUTTON' || 
+        target.tagName === 'A' || 
+        target.tagName === 'SELECT' ||
+        target.tagName === 'INPUT' ||
+        target.closest('button') || 
+        target.closest('a') ||
+        target.closest('[role="button"]') ||
+        target.classList.contains('cursor-pointer');
+      setIsHoveringClickable(!!isClickable);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('mouseenter', handleMouseEnter);
+    window.addEventListener('mouseover', handleMouseOver);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('mouseenter', handleMouseEnter);
+      window.removeEventListener('mouseover', handleMouseOver);
+    };
+  }, [isTouchDevice]);
+
+  // Efek lerp (linear interpolation) untuk gerakan trailing yang elastis dan mulus
+  useEffect(() => {
+    if (isTouchDevice || !visible) return;
+
+    let animationFrameId;
+    const updateTrail = () => {
+      setTrailPosition(prev => {
+        const dx = position.x - prev.x;
+        const dy = position.y - prev.y;
+        return {
+          x: prev.x + dx * 0.16, // Nilai lerp 0.16 memberikan efek tarikan (inertia) yang pas
+          y: prev.y + dy * 0.16
+        };
+      });
+      animationFrameId = requestAnimationFrame(updateTrail);
+    };
+
+    animationFrameId = requestAnimationFrame(updateTrail);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [position, isTouchDevice, visible]);
+
+  if (isTouchDevice || !visible) return null;
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[9999] no-print print:hidden">
+      {/* Dot kecil dalam: mengikuti ujung kursor secara instan */}
+      <div 
+        className="fixed -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full transition-transform duration-100 ease-out"
+        style={{ 
+          left: `${position.x}px`, 
+          top: `${position.y}px`,
+          backgroundColor: 'var(--primary)',
+          transform: `translate(-50%, -50%) scale(${isHoveringClickable ? 1.5 : 1})`
+        }}
+      />
+      {/* Ring luar: membuntuti dengan kelembaman elastis */}
+      <div 
+        className="fixed -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all duration-75 ease-out"
+        style={{ 
+          left: `${trailPosition.x}px`, 
+          top: `${trailPosition.y}px`,
+          width: isHoveringClickable ? '44px' : '28px',
+          height: isHoveringClickable ? '44px' : '28px',
+          borderColor: 'var(--primary)',
+          backgroundColor: 'var(--primary)',
+          opacity: isHoveringClickable ? 0.18 : 0.08,
+          transform: 'translate(-50%, -50%)'
+        }}
+      />
+    </div>
+  );
+};
+
 // --- PDF EXPORT MENU (Dropdown ekspor PDF kustom) ---
 const PDFExportMenu = ({ onExport, isExporting }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -1315,6 +1423,7 @@ function App() {
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${printMode ? `print-mode-${printMode}` : ''}`}>
+      <CursorFollower />
       
       {/* HEADER BANNER */}
       <header className="bg-bg-card border-b border-border-color text-text-main sticky top-0 z-50 transition-colors duration-150 h-14">
