@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
 import * as htmlToImage from 'html-to-image';
+import { jsPDF } from 'jspdf';
 import {
   Upload,
   Layers,
@@ -30,7 +31,10 @@ import {
   TrendingUp,
   TrendingDown,
   Eye,
-  EyeOff
+  EyeOff,
+  Printer,
+  BarChart3,
+  FileText
 } from 'lucide-react';
 
 
@@ -279,6 +283,65 @@ const ChartExportMenu = ({ chartRef, filename }) => {
   );
 };
 
+// --- PDF EXPORT MENU (Dropdown ekspor PDF kustom) ---
+const PDFExportMenu = ({ onExport, isExporting }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={isExporting}
+        className="p-1.5 rounded-md border border-border-color bg-bg-card text-text-muted hover:text-text-main hover:bg-bg-app disabled:opacity-50 transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 font-semibold text-xs h-8"
+        title="Ekspor Laporan PDF"
+      >
+        {isExporting ? (
+          <RefreshCw size={14} className="animate-spin text-primary" />
+        ) : (
+          <Download size={14} />
+        )}
+        <span className="hidden md:inline">Ekspor PDF</span>
+      </button>
+      {isOpen && (
+        <ul className="absolute right-0 mt-1 z-50 w-56 bg-bg-card border border-border-color rounded-md shadow-lg py-1 text-xs select-none">
+          <li
+            onClick={() => { onExport('all'); setIsOpen(false); }}
+            className="px-4 py-2.5 text-text-main hover:bg-primary-soft hover:text-primary cursor-pointer transition-colors flex items-center gap-2.5"
+          >
+            <Printer size={14} className="text-blue-600 dark:text-blue-400 shrink-0" />
+            <span>Cetak Laporan Lengkap (A4)</span>
+          </li>
+          <li
+            onClick={() => { onExport('charts'); setIsOpen(false); }}
+            className="px-4 py-2.5 text-text-main hover:bg-primary-soft hover:text-primary cursor-pointer transition-colors flex items-center gap-2.5"
+          >
+            <BarChart3 size={14} className="text-primary shrink-0" />
+            <span>Unduh Grafik Saja (PDF 1 Halaman)</span>
+          </li>
+          <li
+            onClick={() => { onExport('data'); setIsOpen(false); }}
+            className="px-4 py-2.5 text-text-main hover:bg-primary-soft hover:text-primary cursor-pointer transition-colors flex items-center gap-2.5"
+          >
+            <FileText size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+            <span>Cetak Tabel Data Saja (A4)</span>
+          </li>
+        </ul>
+      )}
+    </div>
+  );
+};
+
 function App() {
   // --- STATE MANAGEMENT ---
   const [records, setRecords] = useState([]);
@@ -294,6 +357,8 @@ function App() {
   const [currentPage, setCurrentPage] = useState(1);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showRincianCategory, setShowRincianCategory] = useState(true);
+  const [printMode, setPrintMode] = useState(null); // null | 'all' | 'charts' | 'data'
+  const [isExporting, setIsExporting] = useState(false);
   const fileInputRef = useRef(null);
   const donutChartRef = useRef(null);
   const barChartRef = useRef(null);
@@ -564,6 +629,73 @@ function App() {
     setRecords(DEFAULT_RECORDS);
     setFileName('');
     setCurrentPage(1);
+  };
+
+  const handleExportPDF = async (type) => {
+    if (records.length === 0) {
+      alert("Tidak ada data untuk diekspor! Silakan unggah berkas Excel terlebih dahulu.");
+      return;
+    }
+
+    if (type === 'charts') {
+      setIsExporting(true);
+      // Beri jeda kecil agar React merender logo & judul PDF formal
+      setTimeout(async () => {
+        const element = document.getElementById('visual-charts-section');
+        if (!element) {
+          alert("Elemen grafik tidak ditemukan!");
+          setIsExporting(false);
+          return;
+        }
+        try {
+          const dataUrl = await htmlToImage.toPng(element, {
+            backgroundColor: darkMode ? '#18191b' : '#ffffff',
+            style: {
+              transform: 'scale(1)',
+              transformOrigin: 'top left',
+              width: element.offsetWidth + 'px',
+              height: element.offsetHeight + 'px'
+            },
+            pixelRatio: 3, // Perbesar resolusi gambar 3x agar sangat tajam saat dicetak/zoom
+            filter: (node) => {
+              if (node.tagName === 'BUTTON') return false;
+              if (node.classList && (node.classList.contains('print:hidden') || node.classList.contains('no-print'))) {
+                return false;
+              }
+              return true;
+            },
+            quality: 1.0
+          });
+
+          const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'px',
+            format: [element.offsetWidth, element.offsetHeight]
+          });
+
+          pdf.addImage(dataUrl, 'PNG', 0, 0, element.offsetWidth, element.offsetHeight);
+          const fileBase = fileName ? fileName.replace(/\.[^/.]+$/, "") : "laporan-nilai";
+          const catName = filterMode === 'kelas' ? `kelas-${selectedKelas}` : `jenjang-${selectedJenjang}`;
+          pdf.save(`grafik-${fileBase}-${catName}.pdf`);
+        } catch (error) {
+          console.error("Gagal mengekspor grafik ke PDF:", error);
+          alert(`Gagal mengekspor grafik ke PDF: ${error.message}`);
+        } finally {
+          setIsExporting(false);
+        }
+      }, 200);
+    } else {
+      setPrintMode(type);
+      setTimeout(() => {
+        try {
+          window.print();
+        } catch (error) {
+          console.error("Gagal melakukan pencetakan:", error);
+        } finally {
+          setPrintMode(null);
+        }
+      }, 500);
+    }
   };
 
   // --- DYNAMIC THEMING FOR ECHARTS ---
@@ -1135,6 +1267,10 @@ function App() {
     return filteredStudents.slice(start, start + itemsPerPage);
   }, [filteredStudents, currentPage]);
 
+  const studentsToRender = useMemo(() => {
+    return printMode ? filteredStudents : paginatedStudents;
+  }, [printMode, filteredStudents, paginatedStudents]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, studentStatusFilter, selectedKelas, selectedJenjang, filterMode]);
@@ -1178,7 +1314,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen transition-colors duration-300">
+    <div className={`min-h-screen transition-colors duration-300 ${printMode ? `print-mode-${printMode}` : ''}`}>
       
       {/* HEADER BANNER */}
       <header className="bg-bg-card border-b border-border-color text-text-main sticky top-0 z-50 transition-colors duration-150 h-14">
@@ -1211,10 +1347,13 @@ function App() {
             {/* Kontrol Desktop & Tablet */}
             <div className="hidden sm:flex items-center gap-2.5">
 
+              {/* PDF Export Dropdown */}
+              <PDFExportMenu onExport={handleExportPDF} isExporting={isExporting} />
+
               {/* Reset Data Button */}
               <button
                 onClick={handleResetData}
-                className="p-1.5 rounded-md border border-border-color bg-bg-card text-text-muted hover:text-text-main hover:bg-bg-app transition-all duration-150 cursor-pointer"
+                className="p-1.5 rounded-md border border-border-color bg-bg-card text-text-muted hover:text-text-main hover:bg-bg-app transition-all duration-150 cursor-pointer h-8 w-8 flex items-center justify-center"
                 title="Reset Data ke Awal"
               >
                 <RefreshCw size={16} />
@@ -1298,6 +1437,32 @@ function App() {
               <span>Reset Data</span>
             </button>
           </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-text-muted font-medium">Ekspor Laporan:</span>
+            <div className="flex gap-1.5 flex-wrap">
+              <button 
+                onClick={() => { handleExportPDF('all'); setMenuOpen(false); }}
+                className="px-2.5 py-1.5 rounded-md border border-border-color bg-bg-app text-text-main text-[10px] font-semibold cursor-pointer flex items-center gap-1"
+              >
+                <Printer size={11} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                <span>Lengkap</span>
+              </button>
+              <button 
+                onClick={() => { handleExportPDF('charts'); setMenuOpen(false); }}
+                className="px-2.5 py-1.5 rounded-md border border-border-color bg-bg-app text-text-main text-[10px] font-semibold cursor-pointer flex items-center gap-1"
+              >
+                <BarChart3 size={11} className="text-primary shrink-0" />
+                <span>Grafik</span>
+              </button>
+              <button 
+                onClick={() => { handleExportPDF('data'); setMenuOpen(false); }}
+                className="px-2.5 py-1.5 rounded-md border border-border-color bg-bg-app text-text-main text-[10px] font-semibold cursor-pointer flex items-center gap-1"
+              >
+                <FileText size={11} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>Tabel</span>
+              </button>
+            </div>
+          </div>
           <div className="flex items-center justify-between pt-2 border-t border-border-color">
             <span className="text-xs text-text-muted font-medium">Pengguna:</span>
             <div className="flex items-center gap-2">
@@ -1313,8 +1478,31 @@ function App() {
       {/* DASHBOARD CONTAINER */}
       <main className="w-full px-4 sm:px-6 py-8 flex flex-col gap-8">
         
+        {/* PRINT-ONLY HEADER */}
+        <div className="hidden print:block mb-6 border-b-2 border-border-color pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src="/favicon.svg" alt="Logo" className="w-9 h-9" />
+              <div>
+                <h1 className="text-base font-bold text-black dark:text-white uppercase tracking-wide">
+                  Laporan Hasil Penilaian Ujian Baca Kitab
+                </h1>
+                <p className="text-[10px] text-text-muted font-medium">
+                  Madrasah Diniyah Takmiliyah Miftahul Ulum Banyuputih Kidul Jatiroto Lumajang
+                </p>
+              </div>
+            </div>
+            <div className="text-right text-[10px] text-text-muted">
+              <p className="font-semibold text-text-main">
+                {filterMode === 'kelas' ? `Kelas: ${selectedKelas}` : `Jenjang: ${selectedJenjang}`}
+              </p>
+              <p>Tanggal Cetak: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            </div>
+          </div>
+        </div>
+
         {/* ROW 1: UPLOAD EXCEL SECTION */}
-        <section className="bg-bg-card border border-border-color rounded-lg p-5 flex flex-col md:flex-row gap-6 items-center transition-all duration-150">
+        <section className="bg-bg-card border border-border-color rounded-lg p-5 flex flex-col md:flex-row gap-6 items-center transition-all duration-150 print:hidden">
           
           <div className="flex-1">
             <h2 className="text-base font-bold text-text-main flex items-center gap-2">
@@ -1368,7 +1556,7 @@ function App() {
         </section>
 
         {/* ROW 2: FILTERS & CONTROL PANEL */}
-        <section className="bg-bg-card border border-border-color rounded-lg p-5 flex flex-col gap-5 transition-all duration-150">
+        <section className="bg-bg-card border border-border-color rounded-lg p-5 flex flex-col gap-5 transition-all duration-150 print:hidden">
           
           <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-6">
             
@@ -1464,7 +1652,32 @@ function App() {
         </section>
 
         {/* ROW 3: STAT CARDS GRID (Optimized for TVs) */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+        <div id="visual-charts-section" className={`flex flex-col gap-8 p-4 rounded-xl ${isExporting ? 'bg-bg-card' : ''} ${printMode === 'data' ? 'print:hidden' : ''}`}>
+          
+          {/* PDF EXPORT FORMAL HEADER (Visible only during PDF export) */}
+          {isExporting && (
+            <div className="border-b-2 border-border-color pb-4 mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img src="/favicon.svg" alt="Logo" className="w-10 h-10" />
+                <div>
+                  <h1 className="text-sm sm:text-base font-bold text-text-main uppercase tracking-wide">
+                    Laporan Grafik Penilaian Ujian Baca Kitab
+                  </h1>
+                  <p className="text-[10px] text-text-muted font-medium">
+                    Madrasah Diniyah Takmiliyah Miftahul Ulum Banyuputih Kidul Jatiroto Lumajang
+                  </p>
+                </div>
+              </div>
+              <div className="text-right text-[10px] text-text-muted">
+                <p className="font-semibold text-text-main">
+                  {filterMode === 'kelas' ? `Kelas: ${selectedKelas}` : `Jenjang: ${selectedJenjang}`}
+                </p>
+                <p>Tanggal: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              </div>
+            </div>
+          )}
+
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 print:grid-cols-5 gap-5">
           
           {/* Card 1: Keseluruhan */}
           <div className="bg-bg-card border border-border-color rounded-lg p-5 relative overflow-hidden group flex flex-col justify-between">
@@ -1657,13 +1870,13 @@ function App() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
                 className="overflow-hidden"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 print:grid-cols-5 gap-4 pt-1">
                   
                   {/* Infografis 1: Keseluruhan */}
                   <div className="bg-bg-card border border-border-color rounded-lg p-4 flex flex-col gap-3 transition-all duration-150">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-[10px] font-bold text-text-main uppercase tracking-wide">1. Status Kelulusan (Area)</h4>
+                        <h4 className="text-[10px] font-bold text-text-main uppercase tracking-wide">1. Status Kelulusan</h4>
                         <p className="text-[9px] text-text-muted mt-0.5">Proporsi predikat KKM</p>
                       </div>
                       <ChartExportMenu chartRef={keseluruhanChartRef} filename={`infografis-status-${filterMode}-${filterMode === 'kelas' ? selectedKelas : selectedJenjang}`} />
@@ -1681,7 +1894,7 @@ function App() {
                   <div className="bg-bg-card border border-border-color rounded-lg p-4 flex flex-col gap-3 transition-all duration-150">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-[10px] font-bold text-text-main uppercase tracking-wide">2. Santri Tuntas (Area)</h4>
+                        <h4 className="text-[10px] font-bold text-text-main uppercase tracking-wide">2. Santri Tuntas</h4>
                         <p className="text-[9px] text-text-muted mt-0.5">Tren distribusi tuntas</p>
                       </div>
                       <ChartExportMenu chartRef={tuntasChartRef} filename={`infografis-tuntas-${filterMode}-${filterMode === 'kelas' ? selectedKelas : selectedJenjang}`} />
@@ -1699,7 +1912,7 @@ function App() {
                   <div className="bg-bg-card border border-border-color rounded-lg p-4 flex flex-col gap-3 transition-all duration-150">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-[10px] font-bold text-text-main uppercase tracking-wide">3. Tidak Tuntas (Area)</h4>
+                        <h4 className="text-[10px] font-bold text-text-main uppercase tracking-wide">3. Tidak Tuntas</h4>
                         <p className="text-[9px] text-text-muted mt-0.5">Tren tidak tuntas</p>
                       </div>
                       <ChartExportMenu chartRef={tidakTuntasChartRef} filename={`infografis-tidak-tuntas-${filterMode}-${filterMode === 'kelas' ? selectedKelas : selectedJenjang}`} />
@@ -1717,7 +1930,7 @@ function App() {
                   <div className="bg-bg-card border border-border-color rounded-lg p-4 flex flex-col gap-3 transition-all duration-150">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-[10px] font-bold text-text-main uppercase tracking-wide">4. Tuntas &gt; 70 (Area)</h4>
+                        <h4 className="text-[10px] font-bold text-text-main uppercase tracking-wide">4. Tuntas &gt; 70</h4>
                         <p className="text-[9px] text-text-muted mt-0.5">Nilai rata-rata &gt; 70</p>
                       </div>
                       <ChartExportMenu chartRef={tuntasAtas70ChartRef} filename={`infografis-tuntas-atas-70-${filterMode}-${filterMode === 'kelas' ? selectedKelas : selectedJenjang}`} />
@@ -1735,7 +1948,7 @@ function App() {
                   <div className="bg-bg-card border border-border-color rounded-lg p-4 flex flex-col gap-3 transition-all duration-150">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="text-[10px] font-bold text-text-main uppercase tracking-wide">5. Tuntas &le; 70 (Area)</h4>
+                        <h4 className="text-[10px] font-bold text-text-main uppercase tracking-wide">5. Tuntas &le; 70</h4>
                         <p className="text-[9px] text-text-muted mt-0.5">Nilai rata-rata &le; 70</p>
                       </div>
                       <ChartExportMenu chartRef={tuntasBawah70ChartRef} filename={`infografis-tuntas-bawah-70-${filterMode}-${filterMode === 'kelas' ? selectedKelas : selectedJenjang}`} />
@@ -1756,7 +1969,7 @@ function App() {
         </section>
 
         {/* ROW 4: CHARTS GRID */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="grid grid-cols-1 lg:grid-cols-3 print:grid-cols-3 gap-6">
           {/* Donut Chart: Proporsi Kelulusan */}
           <div className="bg-bg-card border border-border-color rounded-lg p-5 flex flex-col gap-4 transition-all duration-150">
             <div className="flex items-center justify-between">
@@ -1826,11 +2039,12 @@ function App() {
             </div>
           </div>
         </section>
-        {/* ROW 5: TABLES SECTION (Rekap Kelas + Detail Siswa) */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      </div>
+      {/* ROW 5: TABLES SECTION (Rekap Kelas + Detail Siswa) */}
+      <section className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${printMode === 'charts' ? 'print:hidden' : ''}`}>
           
           {/* Left Column: Tabel Rekapitulasi Ringkas Kelas/Jenjang */}
-          <div className="bg-bg-card border border-border-color rounded-lg p-5 flex flex-col gap-4 transition-all duration-150">
+          <div className={`bg-bg-card border border-border-color rounded-lg p-5 flex flex-col gap-4 transition-all duration-150 ${printMode === 'data' ? 'print:hidden' : ''}`}>
             <div>
               <h3 className="text-sm font-bold text-text-main">
                 Tabel Rekap {filterMode === 'kelas' ? 'Seluruh Kelas' : 'Seluruh Jenjang'}
@@ -1874,7 +2088,7 @@ function App() {
           </div>
 
           {/* Right Column: Detailed Students Records Table */}
-          <div className="bg-bg-card border border-border-color rounded-lg p-5 flex flex-col gap-4 lg:col-span-2 transition-all duration-150">
+          <div className={`bg-bg-card border border-border-color rounded-lg p-5 flex flex-col gap-4 transition-all duration-150 ${printMode === 'data' ? 'lg:col-span-3' : 'lg:col-span-2'}`}>
             
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
               <div>
@@ -1885,7 +2099,7 @@ function App() {
               </div>
 
               {/* Table search controls */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 print:hidden">
                 <div className="relative flex items-center">
                   <Search className="absolute left-2.5 text-text-muted" size={14} />
                   <input
@@ -1927,8 +2141,8 @@ function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-color text-text-main">
-                  {paginatedStudents.length > 0 ? (
-                    paginatedStudents.map(student => (
+                  {studentsToRender.length > 0 ? (
+                    studentsToRender.map(student => (
                       <tr key={student.nopes} className="hover:bg-primary/5 transition-all">
                         <td className="p-3 font-semibold">{student.nopes}</td>
                         <td className="p-3 truncate max-w-[120px] font-medium" title={student.nama}>{student.nama}</td>
@@ -1961,7 +2175,7 @@ function App() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center justify-between mt-2 print:hidden">
                 <span className="text-[11px] text-text-muted">
                   Menampilkan {Math.min(filteredStudents.length, (currentPage - 1) * itemsPerPage + 1)}-
                   {Math.min(filteredStudents.length, currentPage * itemsPerPage)} dari {filteredStudents.length} santri

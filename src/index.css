@@ -85,3 +85,90 @@ body {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #52525b;
 }
+
+/* ==========================================
+   PRINT STYLES (@media print)
+   Hanya berlaku saat mencetak atau menyimpan ke PDF.
+   Sama sekali tidak mengubah tampilan layar normal.
+   ========================================== */
+@media print {
+  @page {
+    size: auto;
+    margin: 10mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 10pt !important;
+  }
+
+  /* Elemen-elemen yang harus disembunyikan saat mencetak */
+  header,
+  footer,
+  .no-print,
+  button,
+  input,
+  select,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Tampilkan header cetak kustom khusus print */
+  .print-header-only {
+    display: block !important;
+  }
+
+  /* Struktur layout utama saat dicetak */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 15px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Pastikan semua card print memiliki layout bersih */
+  .bg-bg-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+  }
+
+  /* Hindari pemotongan halaman untuk card visual kecil agar rapi */
+  #visual-charts-section .bg-bg-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Sembunyikan scrollbar dan pastikan tabel melebar penuh */
+  .overflow-x-auto {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  th, td {
+    border: 1px solid #e2e8f0 !important;
+    padding: 6px 8px !important;
+    color: #000000 !important;
+  }
+
+  /* Kustomisasi chart agar ukurannya pas di kertas */
+  .h-40, .h-48, .h-64 {
+    height: 180px !important;
+    page-break-inside: avoid;
+  }
+
+  /* Paksa cetak latar belakang warna (grafik/badge) di browser */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
